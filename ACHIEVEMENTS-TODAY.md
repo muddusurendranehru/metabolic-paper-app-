@@ -1,0 +1,64 @@
+# Dr Muddu TyG Research Dashboard – Today's Achievements
+
+**Date:** Feb 17, 2025
+
+---
+
+## ✅ Success Summary
+
+Everything is working. **Step 1 has an editable master table** – if Tesseract OCR fails or extracts only name with zeros, you can manually edit any cell. Do not change or remove this behaviour; it is the fallback that keeps the app usable.
+
+---
+
+## What We Achieved Today
+
+### 1. **Editable Master Table in Step 1 (Critical)**
+- **Single source of truth** – All patient data flows from the table at the bottom of Step 1
+- **Fully editable** – Name, Age, Sex, TG, Glucose, HDL, Waist: click any cell to edit
+- **TyG and Risk** – Auto-calculated from TG, Glucose, and Waist
+- **When Tesseract fails** – OCR may return only name and zeros; the table can be corrected manually
+- **Do not destroy** – This editable table is essential; keep it as the main data entry point
+
+### 2. **OCR-Based PDF Extraction (Tesseract)**
+- Tesseract.js + pdf2pic for scanned lab reports
+- `/api/ocr` route extracts name, age, sex, tg, glucose, hdl
+- Multiple PDF upload with progress bar
+- OCR results are written into the master table; users can fix any errors directly in the table
+
+### 3. **Manual Add Patient**
+- Form above the table: Name*, Age, Sex, TG*, Glucose*, HDL, Waist
+- "+ Add Patient" adds a row into the master table
+- Values flow to Verify, Waist, and Analyze
+
+### 4. **4-Step Workflow**
+- **Step 1 (Extract):** PDF upload + manual add + **editable master table** ← primary data entry
+- **Step 2 (Verify):** Review queue; optional modal for corrections
+- **Step 3 (Waist):** Edit waist, risk by TyG + waist, Download Complete Dataset
+- **Step 4 (Analyze):** Charts (TyG vs Waist scatter, TyG histogram), JCDR draft, CSV export
+
+### 5. **Data Flow**
+- `patientData` shared across all tabs
+- Edits in Step 1 table update the shared state
+- Verify, Waist, and Analyze read from the same data
+
+### 6. **Charts & Export**
+- TyG Index vs Waist Circumference scatter plot
+- TyG Index Distribution histogram
+- Download CSV at multiple stages
+
+---
+
+## Important: Do Not Destroy Success
+
+- Keep the **editable master table** in Step 1
+- When Tesseract fails, users rely on manual edits in that table
+- Do not remove or break inline editing
+- Do not revert to a read-only extracted table
+
+---
+
+## Current Limitations
+
+- OCR accuracy depends on lab report format and image quality
+- Waist is not in PDFs; must be entered manually (editable in table or Step 3)
+- `/api/patients` is in-memory only (no DB yet)

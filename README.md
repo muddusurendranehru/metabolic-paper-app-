@@ -1,5 +1,31 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Achievements (Setup Complete)
+
+### 1. Next.js App Created
+- **Stack:** Next.js 16.1.6, React 19.2.3, TypeScript 5, Tailwind CSS 4, ESLint 9
+- **Router:** App Router
+- **Template:** app-tw
+- Git repository initialized
+
+### 2. Dependencies Installed (Working)
+| Package | Version | Purpose |
+|---------|---------|---------|
+| pdf-parse | ^2.4.5 | PDF text extraction |
+| shadcn-ui | ^0.9.5 | UI components |
+| lucide-react | ^0.564.0 | Icons |
+| chart.js | ^4.5.1 | Charts |
+| react-chartjs-2 | ^5.3.1 | React bindings for Chart.js |
+| xlsx | ^0.18.5 | Excel read/write |
+| papaparse | ^5.5.3 | CSV parsing |
+| clsx | ^2.1.1 | Conditional class names |
+| tailwind-merge | ^3.4.1 | Tailwind class merging |
+| @tanstack/react-table | ^8.21.3 | Data tables |
+
+**Do not reinstall or overwrite these—setup is stable.**
+
+---
+
 ## Getting Started
 
 First, run the development server:
