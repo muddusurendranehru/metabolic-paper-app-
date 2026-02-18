@@ -1,5 +1,12 @@
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+} from 'docx';
 import type { Patient } from '@/lib/types/patient';
-import { getAnonymizedTable1Data } from './anonymize';
+import type { ManuscriptData } from './ijcpr-manuscript';
 
 type PatientWithStatus = Patient & { status?: string };
 
@@ -14,65 +21,98 @@ export type ManuscriptTemplate = {
   references: string;
 };
 
+function paragraph(text: string, opts?: { heading?: (typeof HeadingLevel)[keyof typeof HeadingLevel]; spacingAfter?: number }) {
+  return new Paragraph({
+    children: [new TextRun({ text })],
+    ...(opts?.heading && { heading: opts.heading }),
+    ...(opts?.spacingAfter != null && { spacing: { after: opts.spacingAfter } }),
+  });
+}
+
 export async function exportWord(
   patients: PatientWithStatus[],
-  manuscript: ManuscriptTemplate,
+  manuscript: ManuscriptData | ManuscriptTemplate,
   filename: string
 ): Promise<void> {
-  const tableRows = getAnonymizedTable1Data(patients);
-  const headers = ['ID', 'Age', 'Sex', 'TG', 'Glucose', 'HDL', 'Waist', 'TyG', 'Risk'];
-  const tableHtml = [
-    '<table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse;">',
-    '<thead><tr>' + headers.map(h => `<th>${escapeHtml(h)}</th>`).join('') + '</tr></thead>',
-    '<tbody>',
-    ...tableRows.slice(0, 100).map(
-      row =>
-        '<tr>' +
-        [row.id, row.age, row.sex, row.tg, row.glucose, row.hdl, row.waist, row.tyg?.toFixed(2), row.risk]
-          .map(c => `<td>${escapeHtml(String(c ?? ''))}</td>`)
-          .join('') +
-        '</tr>'
-    ),
-    '</tbody></table>',
-  ].join('');
+  if (isIJCPRManuscript(manuscript)) {
+    return exportIJCPRManuscript(manuscript, filename);
+  }
+  return exportLegacyManuscript(patients, manuscript, filename);
+}
 
-  const html = `<!DOCTYPE html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
-<head><meta charset="utf-8"><title>${escapeHtml(manuscript.title)}</title></head>
-<body>
-<h1>${escapeHtml(manuscript.title)}</h1>
-<p><strong>Abstract</strong></p>
-<p>${escapeHtml(manuscript.abstract).replace(/\n/g, '</p><p>')}</p>
-<p><strong>Introduction</strong></p>
-<p>${escapeHtml(manuscript.introduction).replace(/\n/g, '</p><p>')}</p>
-<p><strong>Methods</strong></p>
-<p>${escapeHtml(manuscript.methods).replace(/\n/g, '</p><p>')}</p>
-<p><strong>Results</strong></p>
-<p>${escapeHtml(manuscript.results).replace(/\n/g, '</p><p>')}</p>
-<p><strong>Table 1: Patient Characteristics (Anonymized)</strong></p>
-${tableHtml}
-<p><strong>Discussion</strong></p>
-<p>${escapeHtml(manuscript.discussion).replace(/\n/g, '</p><p>')}</p>
-<p><strong>Conclusion</strong></p>
-<p>${escapeHtml(manuscript.conclusion).replace(/\n/g, '</p><p>')}</p>
-<p><strong>References</strong></p>
-<p>${escapeHtml(manuscript.references).replace(/\n/g, '</p><p>')}</p>
-</body>
-</html>`;
+function isIJCPRManuscript(m: ManuscriptData | ManuscriptTemplate): m is ManuscriptData {
+  return 'table1' in m && 'table2' in m && typeof (m as ManuscriptData).table1 === 'string' && typeof (m as ManuscriptData).table2 === 'string';
+}
 
-  const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
+async function exportIJCPRManuscript(data: ManuscriptData, filename: string): Promise<void> {
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: [
+        paragraph(data.title, { heading: HeadingLevel.TITLE, spacingAfter: 400 }),
+        new Paragraph({
+          children: [new TextRun({ text: data.authors, bold: true, size: 24 })],
+          spacing: { after: 200 },
+        }),
+        paragraph(data.affiliation, { spacingAfter: 400 }),
+        paragraph('ABSTRACT', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(data.abstract, { spacingAfter: 400 }),
+        paragraph(`Keywords: ${data.keywords}`, { spacingAfter: 400 }),
+        paragraph('INTRODUCTION', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(data.introduction, { spacingAfter: 400 }),
+        paragraph('METHODS', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(data.methods, { spacingAfter: 400 }),
+        paragraph('RESULTS', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(data.results, { spacingAfter: 400 }),
+        paragraph(data.table1, { spacingAfter: 400 }),
+        paragraph(data.table2, { spacingAfter: 400 }),
+        paragraph('DISCUSSION', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(data.discussion, { spacingAfter: 400 }),
+        paragraph('CONCLUSION', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(data.conclusion, { spacingAfter: 400 }),
+        paragraph('REFERENCES', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(data.references, { spacingAfter: 400 }),
+      ],
+    }],
+  });
+
+  const blob = await Packer.toBlob(doc);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename.replace(/\.docx?$/i, '') + '.doc';
+  a.download = filename.endsWith('.docx') ? filename : filename.replace(/\.doc$/, '') + '.docx';
   a.click();
   URL.revokeObjectURL(url);
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+async function exportLegacyManuscript(
+  _patients: PatientWithStatus[],
+  manuscript: ManuscriptTemplate,
+  filename: string
+): Promise<void> {
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: [
+        paragraph(manuscript.title || 'TyG Study', { heading: HeadingLevel.TITLE }),
+        paragraph('Dr. Muddu Surendra Nehru MD Professor Medicine, HOMA Clinic'),
+        paragraph(''),
+        paragraph(manuscript.abstract || '', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(manuscript.introduction || '', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(manuscript.methods || '', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(manuscript.results || '', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(manuscript.discussion || '', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(manuscript.conclusion || '', { heading: HeadingLevel.HEADING_1 }),
+        paragraph(manuscript.references || '', { heading: HeadingLevel.HEADING_1 }),
+      ],
+    }],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.endsWith('.docx') ? filename : filename.replace(/\.doc$/, '') + '.docx';
+  a.click();
+  URL.revokeObjectURL(url);
 }

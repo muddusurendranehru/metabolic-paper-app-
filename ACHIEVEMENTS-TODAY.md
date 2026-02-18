@@ -59,6 +59,11 @@ Everything is working. **Step 1 has an editable master table** – if Tesseract 
 
 ## Today's Session Highlights
 
+**Latest (Word export + IJCPR):**
+1. **IJCPR manuscript** – `lib/utils/ijcpr-manuscript.ts`: `generateIJCPRManuscript(patients)` returns full ManuscriptData (title, authors, affiliation, abstract, keywords, intro, methods, results, discussion, conclusion, references, table1, table2) with mean ± SD and anonymized tables.
+2. **Word export with docx** – `lib/utils/word-export.ts` uses the `docx` package: real .docx output; if manuscript has `table1`/`table2` (IJCPR format) exports full IJCPR structure; otherwise legacy JCDR format (title, abstract, sections). Tab 5 unchanged (legacy path).
+3. **Server** – Run `npm run dev` (port 3030); build passes (`npm run build`). Push to GitHub after verification.
+
 1. **GitHub Push** – Full codebase pushed to `https://github.com/muddusurendranehru/metabolic-paper-app-` (branch: `master`, 56 files).
 2. **Nullish Coalescing Fix** – Corrected `??` mixed with `||` in `TabExtract.tsx` (e.g. `data.tg ?? (parseFloat(manualValues.tg) || 0)`) so OCR fallback works reliably.
 3. **Dev Port 3030** – Dev server set to port 3030 via `package.json` and `open-dashboard.html`.
