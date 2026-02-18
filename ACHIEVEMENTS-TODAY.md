@@ -1,12 +1,12 @@
 # Dr Muddu TyG Research Dashboard – Today's Achievements
 
-**Date:** Feb 17, 2025
+**Date:** Feb 16, 2025
 
 ---
 
 ## ✅ Success Summary
 
-Everything is working. **Step 1 has an editable master table** – if Tesseract OCR fails or extracts only name with zeros, you can manually edit any cell. Do not change or remove this behaviour; it is the fallback that keeps the app usable.
+Everything is working. **Step 1 has an editable master table** – if Tesseract OCR fails or extracts only name with zeros, you can manually edit any cell. Do not change or remove this behaviour; it is the fallback that keeps the app usable. **Code pushed to GitHub** and ready for collaboration.
 
 ---
 
@@ -54,6 +54,15 @@ Everything is working. **Step 1 has an editable master table** – if Tesseract 
 - When Tesseract fails, users rely on manual edits in that table
 - Do not remove or break inline editing
 - Do not revert to a read-only extracted table
+
+---
+
+## Today's Session Highlights
+
+1. **GitHub Push** – Full codebase pushed to `https://github.com/muddusurendranehru/metabolic-paper-app-` (branch: `master`, 56 files).
+2. **Nullish Coalescing Fix** – Corrected `??` mixed with `||` in `TabExtract.tsx` (e.g. `data.tg ?? (parseFloat(manualValues.tg) || 0)`) so OCR fallback works reliably.
+3. **Dev Port 3030** – Dev server set to port 3030 via `package.json` and `open-dashboard.html`.
+4. **Single Source of Truth** – Confirmed `patientData` drives all tabs; no separate `extracted` state.
 
 ---
 
