@@ -59,7 +59,12 @@ Everything is working. **Step 1 has an editable master table** – if Tesseract 
 
 ## Today's Session Highlights
 
-**Latest (Word export + IJCPR):**
+**Latest (CSV import + server check):**
+1. **CSV import backup** – Step 1 (Extract): "Import CSV Backup" next to Download CSV; `handleImportCSV` parses CSV with `parseCsvToPatients`, maps to full `PatientRow` (tyg/risk from `calcTyG`/`calcRisk`), merges into current list. Use if data is lost after browser close.
+2. **Parser** – `parseCsvToPatients` in `lib/csv-utils.ts` now maps risk "Moderate" correctly (High/Moderate/Normal). Import accepts CSVs with id, name, age, sex, tg, glucose, hdl, waist, tyg, risk (case-insensitive headers).
+3. **Server & push** – Build passes (`npm run build`). Run `npm run dev` (port 3030) to check locally. Changes pushed to GitHub.
+
+**Earlier (Word export + IJCPR):**
 1. **IJCPR manuscript** – `lib/utils/ijcpr-manuscript.ts`: `generateIJCPRManuscript(patients)` returns full ManuscriptData (title, authors, affiliation, abstract, keywords, intro, methods, results, discussion, conclusion, references, table1, table2) with mean ± SD and anonymized tables.
 2. **Word export with docx** – `lib/utils/word-export.ts` uses the `docx` package: real .docx output; if manuscript has `table1`/`table2` (IJCPR format) exports full IJCPR structure; otherwise legacy JCDR format (title, abstract, sections). Tab 5 unchanged (legacy path).
 3. **Server** – Run `npm run dev` (port 3030); build passes (`npm run build`). Push to GitHub after verification.

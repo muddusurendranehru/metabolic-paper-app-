@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { downloadCSV } from "@/lib/csv-utils";
+import { downloadCSV, parseCsvToPatients } from "@/lib/csv-utils";
 import type { PatientRow } from "@/lib/tyg";
 import { calcTyG, calcRisk } from "@/lib/tyg";
 
@@ -150,6 +150,44 @@ export function TabExtract({
     if (confirm("Clear all data? This affects all steps.")) {
       setPatientData([]);
     }
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = (event.target?.result as string) || "";
+      const partials = parseCsvToPatients(text);
+      const imported: PatientRow[] = partials
+        .filter((p) => p.name != null || p.tg != null || p.glucose != null)
+        .map((p) => {
+          const tg = p.tg ?? 0;
+          const glucose = p.glucose ?? 0;
+          const tygVal = p.tyg ?? (tg > 0 && glucose > 0 ? Math.round(calcTyG(tg, glucose) * 100) / 100 : 0);
+          const riskVal = p.risk === "High" || p.risk === "Moderate" ? p.risk : p.risk === "Normal" ? "Normal" : calcRisk(tygVal);
+          return {
+            id: p.id ?? crypto.randomUUID(),
+            name: p.name ?? "Imported",
+            age: p.age ?? 0,
+            sex: p.sex ?? "M",
+            tg,
+            glucose,
+            hdl: p.hdl ?? 0,
+            waist: p.waist ?? 0,
+            tyg: tygVal,
+            risk: riskVal,
+          };
+        });
+      if (imported.length === 0) {
+        alert("No valid rows found in CSV. Expected columns: id, name, age, sex, tg, glucose, hdl, waist, tyg, risk.");
+        return;
+      }
+      setPatientData((prev) => [...prev, ...imported]);
+      alert(`Imported ${imported.length} patient(s) from CSV.`);
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   };
 
   const EditableCell = ({
@@ -318,7 +356,7 @@ export function TabExtract({
         </p>
         {patientData.length > 0 ? (
           <>
-            <div className="flex justify-between items-center mb-3">
+            <div className="flex flex-wrap items-center gap-3 mb-3">
               <p className="text-green-600 font-medium">
                 ✅ {patientData.length} patient(s)
               </p>
@@ -328,6 +366,16 @@ export function TabExtract({
               >
                 📥 Download CSV
               </button>
+              <label className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer inline-block">
+                📥 Import CSV Backup
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleImportCSV}
+                  className="hidden"
+                />
+              </label>
+              <p className="text-sm text-gray-500 w-full">Use Import CSV if data was lost after browser close.</p>
             </div>
             <div className="overflow-x-auto border rounded">
               <table className="w-full text-sm">

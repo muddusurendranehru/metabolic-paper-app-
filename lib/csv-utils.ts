@@ -85,7 +85,7 @@ export function parseCsvToPatients(csv: string): Partial<PatientRow>[] {
       else if (h === "hdl") row.hdl = parseFloat(val) || 0;
       else if (h === "waist") row.waist = parseFloat(val) || 0;
       else if (h === "tyg") row.tyg = parseFloat(val) || 0;
-      else if (h === "risk") row.risk = val === "High" ? "High" : "Normal";
+      else if (h === "risk") row.risk = (val === "High" ? "High" : val === "Moderate" ? "Moderate" : "Normal") as PatientRow["risk"];
       else if (h === "id") row.id = val;
     });
     rows.push(row);
