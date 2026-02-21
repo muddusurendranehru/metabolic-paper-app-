@@ -1,0 +1,55 @@
+# TyG Research Dashboard – Cursor AI Rules
+# Dr. Muddu Surendra Nehru, Professor of Medicine, HOMA Clinic
+
+## ⚠️ GOLDEN RULE: 3 Papers, Zero Confusion
+
+### Paper 1: ✅ PUBLISHED (READ-ONLY)
+- Journal: J Contemp Clin Pract 2025;11(8):349-357
+- DOI: 10.61336/jccp/25-08-50
+- Action: Display badge + DOI link ONLY
+
+### Paper 2: 📤 SUBMITTED (READ-ONLY)
+- Data: 60 patients, manuscript written, submitted
+- Action: Display submission status ONLY
+
+### Paper 3: 🧪 NEW – TyG-HbA1c (ACTIVE)
+- Action: Full development, manuscript generation, export
+
+## When I Request Changes:
+1. ALWAYS ask: "Which paper? 1 (Published), 2 (Submitted), or 3 (Active)?"
+2. If 1 or 2: Respond "⚠️ Read-only. No changes allowed."
+3. If 3: Proceed with NEW files only, never modify Paper 1/2 files
+
+## Never Modify:
+- lib/utils/ijcpr-manuscript.ts (Paper 1)
+- Any submitted manuscript files (Paper 2)
+- Patient type core fields (add optional only)
+
+## Always Confirm:
+"✅ Paper 1 & 2 unchanged. Paper 3 only."
+
+---
+
+## Reference (unchanged behavior)
+
+### Paper 1 ONLY
+- app/published, components/published/* – display + DOI only. No patientData, no export, no edit.
+
+### Paper 2 ONLY
+- app/submitted – submission status only. No regeneration, no export, no edit.
+
+### Paper 3 ONLY
+- lib/utils/hba1c-manuscript.ts, Tab5JCDR (Write JCDR). Full edit → generate → export.
+
+### Shared
+- lib/types/patient.ts: optional fields only (e.g. hba1c?). TabExtract: data entry + table. Tab2Verify, stats-calculator: unchanged unless adding optional support.
+
+### Red Flags
+- "Update manuscript for new data" → Which paper? Paper 3 only.
+- "Add export for Paper 1" → ⚠️ Read-only.
+- "Merge Paper 2 and 3" → ⚠️ Papers stay separate.
+- "Remove optional Patient fields" → ⚠️ Add only.
+- lab() in CSS → Use hsl() only.
+
+### Don't destroy success
+Add or fix in a minimal, safe way. Backend → frontend. Test before changing.

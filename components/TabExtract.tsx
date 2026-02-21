@@ -13,6 +13,7 @@ export function TabExtract({
   setPatientData: (arg: PatientRow[] | ((prev: PatientRow[]) => PatientRow[])) => void;
 }) {
   const [processing, setProcessing] = useState(false);
+  const [llmProcessing, setLlmProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [editingCell, setEditingCell] = useState<{ rowIdx: number; col: string } | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -24,6 +25,7 @@ export function TabExtract({
     glucose: "",
     hdl: "",
     waist: "",
+    hba1c: "",
   });
 
   const updateRow = (rowIdx: number, field: keyof PatientRow, value: string | number) => {
@@ -37,6 +39,10 @@ export function TabExtract({
     else if (field === "glucose") next.glucose = typeof value === "number" ? value : parseFloat(String(value)) || 0;
     else if (field === "hdl") next.hdl = typeof value === "number" ? value : parseFloat(String(value)) || 0;
     else if (field === "waist") next.waist = typeof value === "number" ? value : parseFloat(String(value)) || 0;
+    else if (field === "hba1c") {
+      const num = typeof value === "number" ? value : parseFloat(String(value));
+      (next as PatientRow).hba1c = value === "" || value == null || !Number.isFinite(num) ? undefined : num;
+    }
 
     next.tyg = Math.round(calcTyG(next.tg, next.glucose) * 100) / 100;
     next.risk = calcRisk(next.tyg);
@@ -102,9 +108,65 @@ export function TabExtract({
     setProcessing(false);
   };
 
+  const handleFilesLLM = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (files.length === 0) return;
+
+    setLlmProcessing(true);
+    setProgress({ current: 0, total: files.length });
+    const newRows: PatientRow[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch("/api/llm-extract", { method: "POST", body: formData });
+        const data = await res.json();
+
+        const tg = data.tg ?? (parseFloat(manualValues.tg) || 0);
+        const glucose = data.glucose ?? (parseFloat(manualValues.glucose) || 0);
+        const tyg = tg > 0 && glucose > 0 ? Math.round(Math.log((tg * glucose) / 2) * 100) / 100 : (data.tyg ?? 0);
+        const risk = data.risk ?? (tyg >= 9.5 ? "High" : tyg >= 8.5 ? "Moderate" : "Normal");
+
+        newRows.push({
+          id: file.name + "-" + Date.now(),
+          name: data.name || manualValues.name || file.name.replace(/\.pdf$/i, "") || "Patient",
+          age: data.age ?? (manualValues.age ? parseInt(manualValues.age, 10) : 0),
+          sex: data.sex || manualValues.sex || "M",
+          tg: tg,
+          glucose: glucose,
+          hdl: data.hdl ?? (parseFloat(manualValues.hdl) || 0),
+          waist: parseFloat(manualValues.waist) || 0,
+          tyg,
+          risk,
+        });
+      } catch {
+        newRows.push({
+          id: file.name + "-" + Date.now(),
+          name: file.name.replace(/\.pdf$/i, "") || "Patient",
+          age: 0,
+          sex: "M",
+          tg: 0,
+          glucose: 0,
+          hdl: 0,
+          waist: 0,
+          tyg: 0,
+          risk: "Normal",
+        });
+      }
+      setProgress({ current: i + 1, total: files.length });
+    }
+
+    setPatientData((prev) => [...prev, ...newRows]);
+    setLlmProcessing(false);
+  };
+
   const handleAddManual = () => {
     if (!manualValues.name.trim() || !manualValues.tg || !manualValues.glucose) {
-      alert("Please enter Name, TG, and Glucose");
+      alert("❌ Required: Name, TG, Glucose");
       return;
     }
 
@@ -123,10 +185,11 @@ export function TabExtract({
       waist: manualValues.waist ? parseFloat(manualValues.waist) : 0,
       tyg,
       risk: calcRisk(tyg),
+      hba1c: manualValues.hba1c ? parseFloat(manualValues.hba1c) : undefined,
     };
 
     setPatientData((prev) => [...prev, newRow]);
-    setManualValues({ name: "", age: "", sex: "M", tg: "", glucose: "", hdl: "", waist: "" });
+    setManualValues({ name: "", age: "", sex: "M", tg: "", glucose: "", hdl: "", waist: "", hba1c: "" });
   };
 
   const handleDownload = () => {
@@ -141,6 +204,7 @@ export function TabExtract({
         Waist: p.waist,
         TyG: p.tyg,
         risk: p.risk,
+        HbA1c: p.hba1c ?? "",
       })) as unknown[],
       "tyg-study-extract.csv"
     );
@@ -177,6 +241,7 @@ export function TabExtract({
             waist: p.waist ?? 0,
             tyg: tygVal,
             risk: riskVal,
+            hba1c: p.hba1c,
           };
         });
       if (imported.length === 0) {
@@ -267,6 +332,22 @@ export function TabExtract({
         <p className="text-sm text-gray-500 mt-2">
           Uses Tesseract OCR. If OCR fails, edit the table below directly.
         </p>
+        <div className="mt-3">
+          <input
+            type="file"
+            accept=".pdf"
+            multiple
+            onChange={handleFilesLLM}
+            className="hidden"
+            id="pdf-upload-llm"
+          />
+          <label
+            htmlFor="pdf-upload-llm"
+            className="inline-block text-sm text-indigo-600 hover:text-indigo-800 cursor-pointer underline"
+          >
+            Or try LLM extract (if OCR failed)
+          </label>
+        </div>
       </div>
 
       {/* Manual Entry - Add New Row */}
@@ -318,6 +399,14 @@ export function TabExtract({
           />
           <input
             type="number"
+            placeholder="HbA1c (%)"
+            value={manualValues.hba1c}
+            onChange={(e) => setManualValues({ ...manualValues, hba1c: e.target.value })}
+            className="border p-2 rounded"
+            title="Paper 3: optional"
+          />
+          <input
+            type="number"
             placeholder="Waist (cm)"
             value={manualValues.waist}
             onChange={(e) => setManualValues({ ...manualValues, waist: e.target.value })}
@@ -333,11 +422,11 @@ export function TabExtract({
       </div>
 
       {/* Progress */}
-      {processing && (
+      {(processing || llmProcessing) && (
         <div className="mb-6">
           <div className="bg-indigo-100 rounded-lg p-4">
             <p className="text-indigo-800">
-              OCR Processing: {progress.current} / {progress.total}
+              {llmProcessing ? "LLM" : "OCR"} Processing: {progress.current} / {progress.total}
             </p>
             <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
               <div
@@ -389,6 +478,7 @@ export function TabExtract({
                     <th className="p-2 border">HDL</th>
                     <th className="p-2 border">Waist</th>
                     <th className="p-2 border">TyG</th>
+                    <th className="p-2 border">HbA1c</th>
                     <th className="p-2 border">Risk</th>
                   </tr>
                 </thead>
@@ -417,6 +507,9 @@ export function TabExtract({
                         <EditableCell rowIdx={i} field="waist" value={p.waist} type="number" />
                       </td>
                       <td className="p-2 border text-center">{p.tyg.toFixed(2)}</td>
+                      <td className="p-2 border">
+                        <EditableCell rowIdx={i} field="hba1c" value={p.hba1c ?? ""} type="number" />
+                      </td>
                       <td className="p-2 border">
                         <span
                           className={`px-2 py-1 rounded text-xs ${

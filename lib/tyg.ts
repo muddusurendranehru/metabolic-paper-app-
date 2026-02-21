@@ -14,6 +14,8 @@ export interface PatientRow {
   waist: number;
   tyg: number;
   risk: "Normal" | "Moderate" | "High";
+  /** Paper 3: TyG-HbA1c (optional) */
+  hba1c?: number | null;
 }
 
 /**

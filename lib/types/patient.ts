@@ -1,5 +1,6 @@
 /**
  * Extensible patient schema for TyG Research Dashboard
+ * Core fields (PatientBase) are required for existing flows. Optional fields in PatientExtensions only.
  */
 
 export type RiskLevel = "Normal" | "Moderate" | "High";
@@ -17,11 +18,31 @@ export interface PatientBase {
   risk: RiskLevel;
 }
 
-/** Extensible fields (HbA1c, etc.) - add here */
+/** Extensible fields – add optional only. Paper 3: HbA1c; verification; future lipids/anthropometry. */
 export interface PatientExtensions {
-  hba1c?: number | null;
   filename?: string | null;
+  status?: "pending" | "verified" | "rejected";
+  verifiedAt?: string;
+  verifiedBy?: string;
+  /** Paper 3: TyG-HbA1c */
+  hba1c?: number | null;
   verified?: boolean;
+
+  // Optional lipids / glucose
+  ldl?: number | null;
+  insulin?: number | null;
+
+  // Optional inflammation / anthropometry
+  uricAcid?: number | null;
+  height?: number | null;
+  weight?: number | null;
+  bmi?: number | null;
+
+  // Metadata
+  ocrConfidence?: number;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type Patient = PatientBase & PatientExtensions;

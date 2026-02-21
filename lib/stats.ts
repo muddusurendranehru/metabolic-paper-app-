@@ -2,7 +2,10 @@ import type { Patient } from '@/lib/types/patient';
 
 export function calculateStats(patients: (Patient & { status?: string })[]) {
   const verified = patients.filter(p => p.status === 'verified');
-  const n = verified.length;
+  // Use all patients when none are explicitly verified (e.g. from Extract/manual add)
+  // so Step 5 and manuscript show correct totals and stats
+  const forStats = verified.length > 0 ? verified : patients;
+  const n = forStats.length;
 
   if (n === 0) {
     return {
@@ -24,12 +27,12 @@ export function calculateStats(patients: (Patient & { status?: string })[]) {
   }
 
   const sum = (field: keyof Patient) =>
-    verified.reduce((s, p) => s + (p[field] as number || 0), 0);
+    forStats.reduce((s, p) => s + (p[field] as number || 0), 0);
 
   const avg = (field: keyof Patient) => sum(field) / n;
 
-  const tygValues = verified.map(p => p.tyg || 0).filter(v => v > 0);
-  const waistValues = verified.map(p => p.waist || 0).filter(v => v > 0);
+  const tygValues = forStats.map(p => p.tyg || 0).filter(v => v > 0);
+  const waistValues = forStats.map(p => p.waist || 0).filter(v => v > 0);
 
   const correlationR = calculateCorrelation(tygValues, waistValues);
   const pValue = calculatePValue(correlationR, n);
@@ -42,11 +45,11 @@ export function calculateStats(patients: (Patient & { status?: string })[]) {
     avgGlucose: avg('glucose'),
     avgTG: avg('tg'),
     avgHDL: avg('hdl'),
-    highRisk: verified.filter(p => p.risk === 'High').length,
-    moderateRisk: verified.filter(p => p.risk === 'Moderate').length,
-    normalRisk: verified.filter(p => p.risk === 'Normal').length,
-    maleCount: verified.filter(p => p.sex === 'M').length,
-    femaleCount: verified.filter(p => p.sex === 'F').length,
+    highRisk: forStats.filter(p => p.risk === 'High').length,
+    moderateRisk: forStats.filter(p => p.risk === 'Moderate').length,
+    normalRisk: forStats.filter(p => p.risk === 'Normal').length,
+    maleCount: forStats.filter(p => p.sex === 'M').length,
+    femaleCount: forStats.filter(p => p.sex === 'F').length,
     correlationR,
     pValue,
   };

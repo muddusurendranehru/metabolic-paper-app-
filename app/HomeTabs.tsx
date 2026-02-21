@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePatients } from "@/lib/patient-store";
 import { TabExtract } from "@/components/TabExtract";
 import { TabVerify } from "@/components/tabs/TabVerify";
@@ -22,6 +22,14 @@ const TABS = [
   { name: "📄 Write JCDR", component: Tab5JCDR },
 ] as const;
 
+const HASH_TO_TAB: Record<string, number> = {
+  extract: 0,
+  verify: 1,
+  waist: 2,
+  analyze: 3,
+  write: 4,
+};
+
 export function HomeTabs({
   initialTab,
   initialPage,
@@ -31,6 +39,16 @@ export function HomeTabs({
 }) {
   const { patients, setPatients } = usePatients();
   const [activeTab, setActiveTab] = useState(0);
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = typeof window !== "undefined" ? window.location.hash.slice(1).toLowerCase() : "";
+      const tabIndex = hash ? HASH_TO_TAB[hash] : undefined;
+      if (tabIndex !== undefined && tabIndex >= 0) setActiveTab(tabIndex);
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
   const isJCDRTab = activeTab === 4;
   const ActiveMainComponent = !isJCDRTab ? MAIN_TABS[activeTab].component : null;
 

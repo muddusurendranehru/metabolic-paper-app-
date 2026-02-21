@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import type { Patient } from '@/lib/types/patient';
 import { generateManuscriptTemplate } from '@/lib/utils/manuscript-template';
 import { getAnonymizedTable1Data } from '@/lib/utils/anonymize';
@@ -8,6 +9,18 @@ import { calculateStats } from '@/lib/utils/stats-calculator';
 import { exportCSV } from '@/lib/utils/csv-export';
 import { exportPDF } from '@/lib/utils/pdf-export';
 import { exportWord } from '@/lib/utils/word-export';
+import { generateIJCPRManuscript } from '@/lib/utils/ijcpr-manuscript';
+import {
+  generateHbA1cManuscript,
+  filterPatientsWithTyGAndHbA1c,
+} from '@/lib/utils/hba1c-manuscript';
+import type { ManuscriptData } from '@/lib/utils/ijcpr-manuscript';
+import {
+  generateScatterPlotSVG,
+  generateHistogramSVG,
+  generateRiskBarChartSVG,
+  svgToPng,
+} from '@/lib/chart-svg';
 
 type PatientWithStatus = Patient & { status?: string };
 
@@ -24,6 +37,10 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
   const stats = calculateStats(patientData);
   const table1Data = getAnonymizedTable1Data(patientData);
   const verified = patientData.filter((p: PatientWithStatus) => p.status === 'verified');
+  // Use all patients for export when none are explicitly verified (same as stats)
+  const patientsForExport = verified.length > 0 ? verified : patientData;
+  // Paper 3: patients with both TyG and HbA1c for manuscript/export
+  const patientsWithHbA1c = filterPatientsWithTyGAndHbA1c(patientData);
 
   const handleEdit = (section: string) => {
     setIsEditing(prev => ({ ...prev, [section]: true }));
@@ -38,18 +55,53 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
   };
 
   const handleExportWord = async () => {
-    await exportWord(verified, manuscript, 'tyg-study-manuscript.docx');
+    const figures = {
+      fig1: generateScatterPlotSVG(patientData),
+      fig2: generateHistogramSVG(patientData),
+      fig3: generateRiskBarChartSVG(patientData),
+    };
+    await exportWord(patientsForExport, ijcprManuscript, 'tyd-ijcpr-manuscript.docx', figures);
+  };
+
+  const handleExportPaper2Word = async () => {
+    if (patientsWithHbA1c.length === 0) {
+      alert('No patients with both TyG and HbA1c. Add HbA1c values in data to export Paper 3.');
+      return;
+    }
+    const hba1cManuscript = generateHbA1cManuscript(patientsWithHbA1c);
+    const figures = {
+      fig1: generateScatterPlotSVG(patientsWithHbA1c),
+      fig2: generateHistogramSVG(patientsWithHbA1c),
+      fig3: generateRiskBarChartSVG(patientsWithHbA1c),
+    };
+    await exportWord(
+      patientsWithHbA1c,
+      hba1cManuscript as ManuscriptData,
+      'tyg-hba1c-manuscript.docx',
+      figures
+    );
   };
 
   const handleExportPDF = async () => {
     if (manuscriptRef.current) {
-      await exportPDF(manuscriptRef.current, 'tyg-study-manuscript.pdf');
+      await exportPDF(manuscriptRef.current, 'tyd-ijcpr-manuscript.pdf');
     }
   };
 
   const handleExportCSV = () => {
-    exportCSV(verified, 'tyg-study-anonymized.csv');
+    exportCSV(patientsForExport, 'tyg-study-anonymized.csv');
   };
+
+  const handleExportFigures = () => {
+    svgToPng(generateScatterPlotSVG(patientsForExport), 'figure1-tyg-vs-waist.png');
+    setTimeout(() => svgToPng(generateHistogramSVG(patientsForExport), 'figure2-tyg-distribution.png'), 300);
+    setTimeout(() => {
+      svgToPng(generateRiskBarChartSVG(patientsForExport), 'figure3-risk-stratification.png');
+      alert('✅ All 3 figures exported (300 DPI PNG)');
+    }, 600);
+  };
+
+  const ijcprManuscript = generateIJCPRManuscript(patientData);
 
   const SectionEditor = ({
     section,
@@ -63,32 +115,34 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
     <div className="mb-6 border rounded-lg p-4 bg-white">
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-bold text-lg text-indigo-900">{title}</h3>
-        {isEditing[section] ? (
-          <div className="flex gap-2">
+        <div data-pdf-hide className="flex gap-2">
+          {isEditing[section] ? (
+            <>
+              <button
+                type="button"
+                onClick={() => handleSave(section)}
+                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+              >
+                💾 Save
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCancel(section)}
+                className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
+              >
+                ✕ Cancel
+              </button>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={() => handleSave(section)}
-              className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+              onClick={() => handleEdit(section)}
+              className="px-3 py-1 border border-indigo-300 text-indigo-600 rounded text-sm hover:bg-indigo-50"
             >
-              💾 Save
+              ✏️ Edit
             </button>
-            <button
-              type="button"
-              onClick={() => handleCancel(section)}
-              className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
-            >
-              ✕ Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => handleEdit(section)}
-            className="px-3 py-1 border border-indigo-300 text-indigo-600 rounded text-sm hover:bg-indigo-50"
-          >
-            ✏️ Edit
-          </button>
-        )}
+          )}
+        </div>
       </div>
       {isEditing[section] ? (
         <textarea
@@ -104,6 +158,52 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
+      {/* Paper 3 header – active workspace */}
+      <div className="mb-6 p-4 bg-violet-50 border border-violet-200 rounded-lg">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">✏️</span>
+          <div>
+            <h2 className="text-lg font-bold text-violet-900">
+              Paper 3: TyG &amp; HbA1c Correlation
+            </h2>
+            <p className="text-sm text-violet-700">🆕 NEW (HbA1c field added)</p>
+            <p className="text-sm text-violet-800 font-medium">✏️ ACTIVE: Full development workspace</p>
+          </div>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          <div className="p-3 bg-green-50 border border-green-200 rounded text-sm">
+            <span className="font-semibold text-green-800">Paper 1 (Published):</span>
+            <span className="text-green-700 ml-2">TyG &amp; Metabolic Risk: NAFLD Perspective. JCCP 2025. </span>
+            <a href="https://doi.org/10.61336/jccp/25-08-50" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline ml-1">DOI →</a>
+          </div>
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm">
+            <span className="font-semibold text-amber-800">Paper 2 (Submitted):</span>
+            <span className="text-amber-700 ml-2">TyG &amp; Waist: 60-Patient Study. Manuscript written. </span>
+            <Link href="/submitted" className="text-amber-600 hover:underline ml-1">Status →</Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Paper 1 / 2 / 3 reference */}
+      <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <h3 className="text-sm font-bold text-gray-800 mb-3">Papers</h3>
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="p-3 bg-white rounded border border-green-100">
+            <p className="text-sm text-green-800 font-semibold">Paper 1: TyG &amp; Metabolic Risk (NAFLD)</p>
+            <p className="text-xs text-green-600 mt-1">✅ PUBLISHED • JCCP 2025 • <a href="https://doi.org/10.61336/jccp/25-08-50" target="_blank" rel="noopener noreferrer" className="underline">DOI</a></p>
+          </div>
+          <div className="p-3 bg-white rounded border border-amber-100">
+            <p className="text-sm text-amber-800 font-semibold">Paper 2: TyG &amp; Waist (60-patient)</p>
+            <p className="text-xs text-amber-600 mt-1">📤 SUBMITTED • Read-only status</p>
+          </div>
+          <div className="p-3 bg-white rounded border border-violet-100">
+            <p className="text-sm text-violet-800 font-semibold">Paper 3: TyG &amp; HbA1c Correlation</p>
+            <p className="text-xs text-violet-600 mt-1">🆕 NEW (HbA1c field added) • ✏️ ACTIVE: Full development workspace</p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-2xl font-bold text-indigo-900">📄 Step 5: Write JCDR Paper</h2>
@@ -141,7 +241,16 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
       </div>
 
       {/* Export Buttons */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <button
+          type="button"
+          onClick={handleExportFigures}
+          className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100"
+        >
+          <p className="text-2xl mb-2">📊</p>
+          <p className="font-bold text-indigo-900">Export All Figures</p>
+          <p className="text-sm text-indigo-700">3 PNG (300 DPI)</p>
+        </button>
         <button
           type="button"
           onClick={handleExportWord}
@@ -150,6 +259,16 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
           <p className="text-2xl mb-2">📝</p>
           <p className="font-bold text-blue-900">Export Word</p>
           <p className="text-sm text-blue-700">.docx manuscript</p>
+        </button>
+        <button
+          type="button"
+          onClick={handleExportPaper2Word}
+          className="p-4 bg-sky-50 border border-sky-300 rounded-lg hover:bg-sky-100"
+          title="Paper 3: TyG–HbA1c (requires TyG + HbA1c)"
+        >
+          <p className="text-2xl mb-2">✏️</p>
+          <p className="font-bold text-sky-900">Paper 3: Word</p>
+          <p className="text-sm text-sky-700">TyG-HbA1c .docx (n={patientsWithHbA1c.length})</p>
         </button>
         <button
           type="button"
@@ -171,8 +290,35 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
         </button>
       </div>
 
+      {/* PDF export captures this whole block (figures + manuscript); Edit buttons hidden via data-pdf-hide */}
+      <div ref={manuscriptRef} className="space-y-8">
+      {/* Figures Preview */}
+      <div className="mb-8 border rounded-lg p-6 bg-white">
+        <h3 className="font-bold text-xl text-indigo-900 mb-4">Figures Preview</h3>
+        <div className="space-y-6">
+          <div className="border rounded-lg p-4 bg-white">
+            <div dangerouslySetInnerHTML={{ __html: generateScatterPlotSVG(patientData) }} />
+            <p className="text-sm text-gray-600 mt-2 italic">
+              <strong>Figure 1:</strong> {ijcprManuscript.figure1Caption}
+            </p>
+          </div>
+          <div className="border rounded-lg p-4 bg-white">
+            <div dangerouslySetInnerHTML={{ __html: generateHistogramSVG(patientData) }} />
+            <p className="text-sm text-gray-600 mt-2 italic">
+              <strong>Figure 2:</strong> {ijcprManuscript.figure2Caption}
+            </p>
+          </div>
+          <div className="border rounded-lg p-4 bg-white">
+            <div dangerouslySetInnerHTML={{ __html: generateRiskBarChartSVG(patientData) }} />
+            <p className="text-sm text-gray-600 mt-2 italic">
+              <strong>Figure 3:</strong> {ijcprManuscript.figure3Caption}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Manuscript Preview */}
-      <div ref={manuscriptRef} className="border rounded-lg p-8 bg-white">
+      <div className="border rounded-lg p-8 bg-white">
         <div className="text-center mb-8">
           <SectionEditor section="title" title="Title" value={manuscript.title} />
         </div>
@@ -249,6 +395,7 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
         <SectionEditor section="discussion" title="Discussion" value={manuscript.discussion} />
         <SectionEditor section="conclusion" title="Conclusion" value={manuscript.conclusion} />
         <SectionEditor section="references" title="References" value={manuscript.references} />
+      </div>
       </div>
 
       {/* Footer Note */}

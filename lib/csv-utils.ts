@@ -87,6 +87,10 @@ export function parseCsvToPatients(csv: string): Partial<PatientRow>[] {
       else if (h === "tyg") row.tyg = parseFloat(val) || 0;
       else if (h === "risk") row.risk = (val === "High" ? "High" : val === "Moderate" ? "Moderate" : "Normal") as PatientRow["risk"];
       else if (h === "id") row.id = val;
+      else if (h === "hba1c" || h === "hba1c (%)") {
+        const n = parseFloat(val);
+        row.hba1c = Number.isFinite(n) ? n : undefined;
+      }
     });
     rows.push(row);
   }

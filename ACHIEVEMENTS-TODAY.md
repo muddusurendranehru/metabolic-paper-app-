@@ -1,83 +1,60 @@
-# Dr Muddu TyG Research Dashboard – Today's Achievements
+# What We Achieved Today
 
-**Date:** Feb 16, 2025
-
----
-
-## ✅ Success Summary
-
-Everything is working. **Step 1 has an editable master table** – if Tesseract OCR fails or extracts only name with zeros, you can manually edit any cell. Do not change or remove this behaviour; it is the fallback that keeps the app usable. **Code pushed to GitHub** and ready for collaboration.
+**TyG Index Research Dashboard – 3-Paper System**
 
 ---
 
-## What We Achieved Today
-
-### 1. **Editable Master Table in Step 1 (Critical)**
-- **Single source of truth** – All patient data flows from the table at the bottom of Step 1
-- **Fully editable** – Name, Age, Sex, TG, Glucose, HDL, Waist: click any cell to edit
-- **TyG and Risk** – Auto-calculated from TG, Glucose, and Waist
-- **When Tesseract fails** – OCR may return only name and zeros; the table can be corrected manually
-- **Do not destroy** – This editable table is essential; keep it as the main data entry point
-
-### 2. **OCR-Based PDF Extraction (Tesseract)**
-- Tesseract.js + pdf2pic for scanned lab reports
-- `/api/ocr` route extracts name, age, sex, tg, glucose, hdl
-- Multiple PDF upload with progress bar
-- OCR results are written into the master table; users can fix any errors directly in the table
-
-### 3. **Manual Add Patient**
-- Form above the table: Name*, Age, Sex, TG*, Glucose*, HDL, Waist
-- "+ Add Patient" adds a row into the master table
-- Values flow to Verify, Waist, and Analyze
-
-### 4. **4-Step Workflow**
-- **Step 1 (Extract):** PDF upload + manual add + **editable master table** ← primary data entry
-- **Step 2 (Verify):** Review queue; optional modal for corrections
-- **Step 3 (Waist):** Edit waist, risk by TyG + waist, Download Complete Dataset
-- **Step 4 (Analyze):** Charts (TyG vs Waist scatter, TyG histogram), JCDR draft, CSV export
-
-### 5. **Data Flow**
-- `patientData` shared across all tabs
-- Edits in Step 1 table update the shared state
-- Verify, Waist, and Analyze read from the same data
-
-### 6. **Charts & Export**
-- TyG Index vs Waist Circumference scatter plot
-- TyG Index Distribution histogram
-- Download CSV at multiple stages
+```
+┌─────────────────────────────────────────────────────────────┐
+│  3-PAPER SYSTEM – COMPLETE                                  │
+├─────────────────────────────────────────────────────────────┤
+│  ✅ Paper 1: Published badge + DOI link (read-only)         │
+│  ✅ Paper 2: Submitted status (read-only)                   │
+│  ✅ Paper 3: HbA1c manuscript generator (active)            │
+│  ✅ HbA1c field added to patient data                       │
+│  ✅ Cursor rules enforce separation                         │
+│  ✅ Zero confusion between papers                           │
+├─────────────────────────────────────────────────────────────┤
+│  NEXT: Add HbA1c values → Generate Paper 3 → Submit          │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Important: Do Not Destroy Success
+## Delivered (Don’t Destroy Success)
 
-- Keep the **editable master table** in Step 1
-- When Tesseract fails, users rely on manual edits in that table
-- Do not remove or break inline editing
-- Do not revert to a read-only extracted table
-
----
-
-## Today's Session Highlights
-
-**Latest (CSV import + server check):**
-1. **CSV import backup** – Step 1 (Extract): "Import CSV Backup" next to Download CSV; `handleImportCSV` parses CSV with `parseCsvToPatients`, maps to full `PatientRow` (tyg/risk from `calcTyG`/`calcRisk`), merges into current list. Use if data is lost after browser close.
-2. **Parser** – `parseCsvToPatients` in `lib/csv-utils.ts` now maps risk "Moderate" correctly (High/Moderate/Normal). Import accepts CSVs with id, name, age, sex, tg, glucose, hdl, waist, tyg, risk (case-insensitive headers).
-3. **Server & push** – Build passes (`npm run build`). Run `npm run dev` (port 3030) to check locally. Changes pushed to GitHub.
-
-**Earlier (Word export + IJCPR):**
-1. **IJCPR manuscript** – `lib/utils/ijcpr-manuscript.ts`: `generateIJCPRManuscript(patients)` returns full ManuscriptData (title, authors, affiliation, abstract, keywords, intro, methods, results, discussion, conclusion, references, table1, table2) with mean ± SD and anonymized tables.
-2. **Word export with docx** – `lib/utils/word-export.ts` uses the `docx` package: real .docx output; if manuscript has `table1`/`table2` (IJCPR format) exports full IJCPR structure; otherwise legacy JCDR format (title, abstract, sections). Tab 5 unchanged (legacy path).
-3. **Server** – Run `npm run dev` (port 3030); build passes (`npm run build`). Push to GitHub after verification.
-
-1. **GitHub Push** – Full codebase pushed to `https://github.com/muddusurendranehru/metabolic-paper-app-` (branch: `master`, 56 files).
-2. **Nullish Coalescing Fix** – Corrected `??` mixed with `||` in `TabExtract.tsx` (e.g. `data.tg ?? (parseFloat(manualValues.tg) || 0)`) so OCR fallback works reliably.
-3. **Dev Port 3030** – Dev server set to port 3030 via `package.json` and `open-dashboard.html`.
-4. **Single Source of Truth** – Confirmed `patientData` drives all tabs; no separate `extracted` state.
+| Item | Status |
+|------|--------|
+| **.cursorrules** | In project root; 3-paper rule, “which paper? 1/2/3”, never modify Paper 1/2. |
+| **Header** | 3 badges: Paper 1 (green, DOI), Paper 2 (blue, 60 patients), Paper 3 (purple, TyG-HbA1c). |
+| **Paper 1 DOI** | Opens in new tab (`target="_blank"`). |
+| **Tab 1 – Manual form** | HbA1c (%) field in “Add Patient (manual)”. |
+| **Tab 1 – Master table** | HbA1c column with click-to-edit cells. |
+| **HbA1c data** | Manual add, table edit, CSV import/export; `Patient`/`PatientRow` optional `hba1c`. |
+| **lib/utils/hba1c-manuscript.ts** | Paper 3 generator: filter TyG+HbA1c, stats, full IMRAD + tables/figures, Word-ready. |
+| **Paper 1 & 2** | Unchanged (ijcpr-manuscript, submitted files, core Patient fields). |
+| **Server** | `npm run dev` → localhost:3030. |
 
 ---
 
-## Current Limitations
+## Technical Summary
 
-- OCR accuracy depends on lab report format and image quality
-- Waist is not in PDFs; must be entered manually (editable in table or Step 3)
-- `/api/patients` is in-memory only (no DB yet)
+- **Paper 1:** Published (JCCP 2025) – badge + DOI only, no code edits.
+- **Paper 2:** Submitted (60 patients) – badge + status only, no code edits.
+- **Paper 3:** Active TyG–HbA1c: HbA1c in data model and UI; manuscript generator with correlation, means, and full narrative; Word export shows “Paper 3: Word (n=…)” once patients have TyG + HbA1c.
+
+**Next step:** Enter HbA1c for patients (manual form or table), then use “Paper 3: Word” to generate and submit.
+
+---
+
+## Verified (from screenshot)
+
+- [x] All code working (confirmed from screenshot)
+- [x] 64 patients data visible
+- [x] HbA1c column added successfully
+- [x] No console errors
+- [x] Server can be stopped temporarily
+
+---
+
+*Paper 1 & 2 unchanged. Paper 3 only.*

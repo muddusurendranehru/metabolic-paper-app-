@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
+import { PaperNav } from "@/components/layout/PaperNav";
+import { Footer } from "@/components/layout/Footer";
 import { PatientProvider } from "@/lib/patient-store";
 
 const geistSans = Geist({
@@ -31,9 +33,11 @@ export default function RootLayout({
       >
         <PatientProvider>
           <Header />
+          <PaperNav />
           <main className="container mx-auto min-h-screen px-4 py-6">
             {children}
           </main>
+          <Footer />
         </PatientProvider>
       </body>
     </html>
