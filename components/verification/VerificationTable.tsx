@@ -1,6 +1,7 @@
 "use client";
 
 import type { PatientRow } from "@/lib/tyg";
+import { getDiabetesRisk, getDiabetesRiskColor } from "@/lib/utils/diabetes-risk";
 
 interface VerificationTableProps {
   patients: PatientRow[];
@@ -26,6 +27,8 @@ export function VerificationTable({ patients, onVerify }: VerificationTableProps
             <th className="p-2 border">TG</th>
             <th className="p-2 border">Glucose</th>
             <th className="p-2 border">TyG</th>
+            <th className="p-2 border">HbA1c</th>
+            <th className="p-2 border">Diabetes Risk</th>
             <th className="p-2 border">Action</th>
           </tr>
         </thead>
@@ -37,6 +40,12 @@ export function VerificationTable({ patients, onVerify }: VerificationTableProps
               <td className="p-2 border">{p.tg}</td>
               <td className="p-2 border">{p.glucose}</td>
               <td className="p-2 border">{p.tyg.toFixed(2)}</td>
+              <td className="p-2 border">{p.hba1c != null ? p.hba1c : "—"}</td>
+              <td className="p-2 border">
+                <span className={`px-2 py-1 rounded text-xs border ${getDiabetesRiskColor(p.diabetesRisk ?? getDiabetesRisk(p.hba1c))}`}>
+                  {p.diabetesRisk ?? getDiabetesRisk(p.hba1c)}
+                </span>
+              </td>
               <td className="p-2 border">
                 <button
                   onClick={() => onVerify(p)}

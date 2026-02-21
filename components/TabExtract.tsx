@@ -4,6 +4,7 @@ import { useState } from "react";
 import { downloadCSV, parseCsvToPatients } from "@/lib/csv-utils";
 import type { PatientRow } from "@/lib/tyg";
 import { calcTyG, calcRisk } from "@/lib/tyg";
+import { getDiabetesRisk, getDiabetesRiskColor, updatePatientDiabetesRisk } from "@/lib/utils/diabetes-risk";
 
 export function TabExtract({
   patientData,
@@ -46,9 +47,10 @@ export function TabExtract({
 
     next.tyg = Math.round(calcTyG(next.tg, next.glucose) * 100) / 100;
     next.risk = calcRisk(next.tyg);
+    const withDiabetesRisk = updatePatientDiabetesRisk(next);
 
     setPatientData((prev) =>
-      prev.map((r, i) => (i === rowIdx ? next : r))
+      prev.map((r, i) => (i === rowIdx ? withDiabetesRisk : r))
     );
     setEditingCell(null);
   };
@@ -75,31 +77,37 @@ export function TabExtract({
         const tyg = tg > 0 && glucose > 0 ? Math.round(Math.log((tg * glucose) / 2) * 100) / 100 : 0;
         const risk = tyg >= 9.5 ? "High" : tyg >= 8.5 ? "Moderate" : "Normal";
 
-        newRows.push({
-          id: file.name + "-" + Date.now(),
-          name: data.name || manualValues.name || file.name.replace(/\.pdf$/i, "") || "Patient",
-          age: data.age ?? (manualValues.age ? parseInt(manualValues.age, 10) : 0),
-          sex: data.sex || manualValues.sex || "M",
-          tg: tg,
-          glucose: glucose,
-          hdl: data.hdl ?? (parseFloat(manualValues.hdl) || 0),
-          waist: parseFloat(manualValues.waist) || 0,
-          tyg,
-          risk,
-        });
+        newRows.push(
+          updatePatientDiabetesRisk({
+            id: file.name + "-" + Date.now(),
+            name: data.name || manualValues.name || file.name.replace(/\.pdf$/i, "") || "Patient",
+            age: data.age ?? (manualValues.age ? parseInt(manualValues.age, 10) : 0),
+            sex: data.sex || manualValues.sex || "M",
+            tg: tg,
+            glucose: glucose,
+            hdl: data.hdl ?? (parseFloat(manualValues.hdl) || 0),
+            waist: parseFloat(manualValues.waist) || 0,
+            tyg,
+            risk,
+            hba1c: data.hba1c ?? undefined,
+          })
+        );
       } catch {
-        newRows.push({
-          id: file.name + "-" + Date.now(),
-          name: file.name.replace(/\.pdf$/i, "") || "Patient",
-          age: 0,
-          sex: "M",
-          tg: 0,
-          glucose: 0,
-          hdl: 0,
-          waist: 0,
-          tyg: 0,
-          risk: "Normal",
-        });
+        newRows.push(
+          updatePatientDiabetesRisk({
+            id: file.name + "-" + Date.now(),
+            name: file.name.replace(/\.pdf$/i, "") || "Patient",
+            age: 0,
+            sex: "M",
+            tg: 0,
+            glucose: 0,
+            hdl: 0,
+            waist: 0,
+            tyg: 0,
+            risk: "Normal",
+            hba1c: undefined,
+          })
+        );
       }
       setProgress({ current: i + 1, total: files.length });
     }
@@ -131,31 +139,37 @@ export function TabExtract({
         const tyg = tg > 0 && glucose > 0 ? Math.round(Math.log((tg * glucose) / 2) * 100) / 100 : (data.tyg ?? 0);
         const risk = data.risk ?? (tyg >= 9.5 ? "High" : tyg >= 8.5 ? "Moderate" : "Normal");
 
-        newRows.push({
-          id: file.name + "-" + Date.now(),
-          name: data.name || manualValues.name || file.name.replace(/\.pdf$/i, "") || "Patient",
-          age: data.age ?? (manualValues.age ? parseInt(manualValues.age, 10) : 0),
-          sex: data.sex || manualValues.sex || "M",
-          tg: tg,
-          glucose: glucose,
-          hdl: data.hdl ?? (parseFloat(manualValues.hdl) || 0),
-          waist: parseFloat(manualValues.waist) || 0,
-          tyg,
-          risk,
-        });
+        newRows.push(
+          updatePatientDiabetesRisk({
+            id: file.name + "-" + Date.now(),
+            name: data.name || manualValues.name || file.name.replace(/\.pdf$/i, "") || "Patient",
+            age: data.age ?? (manualValues.age ? parseInt(manualValues.age, 10) : 0),
+            sex: data.sex || manualValues.sex || "M",
+            tg: tg,
+            glucose: glucose,
+            hdl: data.hdl ?? (parseFloat(manualValues.hdl) || 0),
+            waist: parseFloat(manualValues.waist) || 0,
+            tyg,
+            risk,
+            hba1c: data.hba1c ?? undefined,
+          })
+        );
       } catch {
-        newRows.push({
-          id: file.name + "-" + Date.now(),
-          name: file.name.replace(/\.pdf$/i, "") || "Patient",
-          age: 0,
-          sex: "M",
-          tg: 0,
-          glucose: 0,
-          hdl: 0,
-          waist: 0,
-          tyg: 0,
-          risk: "Normal",
-        });
+        newRows.push(
+          updatePatientDiabetesRisk({
+            id: file.name + "-" + Date.now(),
+            name: file.name.replace(/\.pdf$/i, "") || "Patient",
+            age: 0,
+            sex: "M",
+            tg: 0,
+            glucose: 0,
+            hdl: 0,
+            waist: 0,
+            tyg: 0,
+            risk: "Normal",
+            hba1c: undefined,
+          })
+        );
       }
       setProgress({ current: i + 1, total: files.length });
     }
@@ -187,8 +201,9 @@ export function TabExtract({
       risk: calcRisk(tyg),
       hba1c: manualValues.hba1c ? parseFloat(manualValues.hba1c) : undefined,
     };
+    const withDiabetesRisk = updatePatientDiabetesRisk(newRow);
 
-    setPatientData((prev) => [...prev, newRow]);
+    setPatientData((prev) => [...prev, withDiabetesRisk]);
     setManualValues({ name: "", age: "", sex: "M", tg: "", glucose: "", hdl: "", waist: "", hba1c: "" });
   };
 
@@ -198,13 +213,14 @@ export function TabExtract({
         name: p.name,
         age: p.age,
         sex: p.sex,
-        TG: p.tg,
-        Glucose: p.glucose,
-        HDL: p.hdl,
-        Waist: p.waist,
-        TyG: p.tyg,
+        tg: p.tg,
+        glucose: p.glucose,
+        hdl: p.hdl,
+        hba1c: p.hba1c ?? "",
+        tyg: p.tyg,
+        waist: p.waist,
         risk: p.risk,
-        HbA1c: p.hba1c ?? "",
+        diabetesRisk: p.diabetesRisk ?? getDiabetesRisk(p.hba1c) ?? "",
       })) as unknown[],
       "tyg-study-extract.csv"
     );
@@ -234,7 +250,7 @@ export function TabExtract({
       const glucose = data.glucose ?? (parseFloat(manualValues.glucose) || 0);
       const tyg = tg > 0 && glucose > 0 ? Math.round(Math.log((tg * glucose) / 2) * 100) / 100 : 0;
       const risk = tyg >= 9.5 ? "High" : tyg >= 8.5 ? "Moderate" : "Normal";
-      const newRow: PatientRow = {
+      const newRow = updatePatientDiabetesRisk({
         id: file.name + "-llm-" + Date.now(),
         name: data.name || manualValues.name || file.name.replace(/\.pdf$/i, "") || "Patient",
         age: data.age ?? (manualValues.age ? parseInt(manualValues.age, 10) : 0),
@@ -244,9 +260,10 @@ export function TabExtract({
         hdl: data.hdl ?? (parseFloat(manualValues.hdl) || 0),
         waist: parseFloat(manualValues.waist) || 0,
         tyg,
-        risk,
-      };
-      setPatientData((prev) => [...prev, newRow]);
+        risk: risk as PatientRow["risk"],
+        hba1c: data.hba1c ?? undefined,
+      } as PatientRow);
+      setPatientData((prev) => [...prev, newRow as PatientRow]);
       alert("Extracted 1 patient via LLM.");
     } catch {
       alert("LLM extraction failed. Try OCR or manual add.");
@@ -262,14 +279,14 @@ export function TabExtract({
     reader.onload = (event) => {
       const text = (event.target?.result as string) || "";
       const partials = parseCsvToPatients(text);
-      const imported: PatientRow[] = partials
+      const imported = partials
         .filter((p) => p.name != null || p.tg != null || p.glucose != null)
         .map((p) => {
           const tg = p.tg ?? 0;
           const glucose = p.glucose ?? 0;
           const tygVal = p.tyg ?? (tg > 0 && glucose > 0 ? Math.round(calcTyG(tg, glucose) * 100) / 100 : 0);
           const riskVal = p.risk === "High" || p.risk === "Moderate" ? p.risk : p.risk === "Normal" ? "Normal" : calcRisk(tygVal);
-          return {
+          return updatePatientDiabetesRisk({
             id: p.id ?? crypto.randomUUID(),
             name: p.name ?? "Imported",
             age: p.age ?? 0,
@@ -280,9 +297,9 @@ export function TabExtract({
             waist: p.waist ?? 0,
             tyg: tygVal,
             risk: riskVal,
-            hba1c: p.hba1c,
-          };
-        });
+            hba1c: p.hba1c ?? undefined,
+          });
+        }) as PatientRow[];
       if (imported.length === 0) {
         alert("No valid rows found in CSV. Expected columns: id, name, age, sex, tg, glucose, hdl, waist, tyg, risk.");
         return;
@@ -506,33 +523,43 @@ export function TabExtract({
               </label>
               <p className="text-sm text-gray-500 w-full">Use Import CSV if data was lost after browser close.</p>
             </div>
-            <div className="overflow-x-auto border rounded">
-              <table className="w-full text-sm">
+            <p className="text-xs text-indigo-600 mb-1">Name, Age, Sex, HbA1c & Diabetes Risk first for laptop; scroll right for TG, Waist, TyG, Risk.</p>
+            <div className="overflow-x-auto border rounded max-w-full">
+              <table className="w-full text-sm min-w-[720px]">
                 <thead className="bg-indigo-50">
                   <tr>
-                    <th className="p-2 border">Name</th>
-                    <th className="p-2 border">Age</th>
-                    <th className="p-2 border">Sex</th>
-                    <th className="p-2 border">TG</th>
-                    <th className="p-2 border">Glucose</th>
-                    <th className="p-2 border">HDL</th>
-                    <th className="p-2 border">Waist</th>
-                    <th className="p-2 border">TyG</th>
-                    <th className="p-2 border">HbA1c</th>
-                    <th className="p-2 border">Risk</th>
+                    <th className="p-1.5 border whitespace-nowrap text-left">Name</th>
+                    <th className="p-1 border w-14 whitespace-nowrap text-center">Age</th>
+                    <th className="p-1 border w-10 whitespace-nowrap text-center">Sex</th>
+                    <th className="p-1.5 border w-14 whitespace-nowrap bg-amber-50 text-center">HbA1c</th>
+                    <th className="p-1.5 border w-20 whitespace-nowrap bg-amber-50">Diabetes Risk</th>
+                    <th className="p-2 border whitespace-nowrap">TG</th>
+                    <th className="p-2 border whitespace-nowrap">Glucose</th>
+                    <th className="p-2 border whitespace-nowrap">HDL</th>
+                    <th className="p-2 border whitespace-nowrap">Waist</th>
+                    <th className="p-2 border whitespace-nowrap">TyG</th>
+                    <th className="p-2 border whitespace-nowrap">Risk</th>
                   </tr>
                 </thead>
                 <tbody>
                   {patientData.map((p, i) => (
                     <tr key={`${p.id}-${i}`} className="hover:bg-gray-50">
-                      <td className="p-2 border">
+                      <td className="p-1.5 border min-w-[100px]">
                         <EditableCell rowIdx={i} field="name" value={p.name} />
                       </td>
-                      <td className="p-2 border">
+                      <td className="p-1 border w-14 text-center">
                         <EditableCell rowIdx={i} field="age" value={p.age} type="number" />
                       </td>
-                      <td className="p-2 border">
+                      <td className="p-1 border w-10 text-center">
                         <EditableCell rowIdx={i} field="sex" value={p.sex} />
+                      </td>
+                      <td className="p-1.5 border w-14 bg-amber-50/50 text-center" title="Edit HbA1c % – updates Diabetes Risk">
+                        <EditableCell rowIdx={i} field="hba1c" value={p.hba1c ?? ""} type="number" />
+                      </td>
+                      <td className="p-1.5 border w-20 bg-amber-50/50">
+                        <span className={`px-1.5 py-0.5 rounded text-xs border ${getDiabetesRiskColor(p.diabetesRisk ?? getDiabetesRisk(p.hba1c))}`} title="From HbA1c (ADA 2026)">
+                          {p.diabetesRisk ?? getDiabetesRisk(p.hba1c)}
+                        </span>
                       </td>
                       <td className="p-2 border">
                         <EditableCell rowIdx={i} field="tg" value={p.tg} type="number" />
@@ -547,9 +574,6 @@ export function TabExtract({
                         <EditableCell rowIdx={i} field="waist" value={p.waist} type="number" />
                       </td>
                       <td className="p-2 border text-center">{p.tyg.toFixed(2)}</td>
-                      <td className="p-2 border">
-                        <EditableCell rowIdx={i} field="hba1c" value={p.hba1c ?? ""} type="number" />
-                      </td>
                       <td className="p-2 border">
                         <span
                           className={`px-2 py-1 rounded text-xs ${

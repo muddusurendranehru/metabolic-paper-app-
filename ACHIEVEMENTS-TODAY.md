@@ -64,4 +64,13 @@
 
 ---
 
-*Paper 1 & 2 unchanged. Paper 3 only.*
+## Latest: ADA 2026 Diabetes Risk + Step 5 HbA1c (not hardwired to TyG)
+
+- **Diabetes Risk (ADA 2026):** HbA1c-only thresholds: Normal &lt;5.7%, Prediabetes 5.7–6.4%, Diabetes 6.5–7.9%, Very High ≥8.0%, Pending (no HbA1c). `lib/utils/diabetes-risk.ts`: `getDiabetesRisk`, `getDiabetesRiskColor`, `updatePatientDiabetesRisk`, `getDiabetesRiskStats`, `getDiabetesRiskByTyG`.
+- **Tab 1 (Extract):** HbA1c and Diabetes Risk columns next to Age/Sex; editable HbA1c; CSV download/import include `hba1c` and `diabetesRisk`. Thin Age/Sex for laptop; scroll right for TG, Waist, TyG, Risk.
+- **Verify tab:** HbA1c and Diabetes Risk columns; Verify modal includes HbA1c field and live Diabetes Risk badge (color + text).
+- **Analyze tab:** ADA 2026 Diabetes Risk counts + “Diabetes Risk by TyG Risk Category” table; `getDiabetesRiskStats` / `getDiabetesRiskByTyG` imported and used.
+- **Step 5 (Write JCDR) – no longer hardwired to TyG only:** Paper selector (Paper 2: TyG-Waist | Paper 3: TyG-HbA1c). When **Paper 3** is selected: manuscript, stats (Mean HbA1c, TyG–HbA1c correlation), figures, and **Table 1** use HbA1c cohort and show **HbA1c** and **Diabetes Risk** columns. Export Word uses selected paper (tyg-waist-manuscript.docx vs tyg-hba1c-manuscript.docx). Table 1 title shows “– HbA1c & ADA 2026 Diabetes Risk” for Paper 3.
+- **Manuscript (Paper 3):** Title/keywords/abstract in `hba1c-manuscript.ts` use ADA 2026 and `getDiabetesRiskStats`; CSV export and anonymized table include `hba1c` and `diabetesRisk`.
+
+*Paper 1 & 2 unchanged. Paper 3 + Step 5 now support HbA1c and ADA 2026 Diabetes Risk.*

@@ -7,6 +7,7 @@
 import type { Patient } from '@/lib/types/patient';
 import { correlation, correlationPValue } from '@/lib/tyg';
 import { anonymizePatients } from './anonymize';
+import { getDiabetesRisk, getDiabetesRiskStats, PAPER3_TITLE } from './diabetes-risk';
 
 export type PatientWithStatus = Patient & { status?: string };
 
@@ -108,20 +109,23 @@ export function generateHbA1cManuscript(
   const hba1cBelow7 = n - stats.countHbA1cAtLeast7;
   const pctBelow7 = n > 0 ? ((hba1cBelow7 / n) * 100).toFixed(1) : '0';
 
-  const title = 'Triglyceride-Glucose Index and HbA1c in Indian Adults: Cross-Sectional Study';
+  const diabetesStats = getDiabetesRiskStats(withBoth);
+  const pValue = stats.tygHbA1cP;
+
+  const title = PAPER3_TITLE;
   const authors = 'Dr. Muddu Surendra Nehru, MD';
   const affiliation =
     'Professor of Medicine, HOMA Clinic, Gachibowli, Hyderabad, Telangana, India';
   const keywords =
-    'TyG index, HbA1c, glycemic control, insulin resistance, diabetes screening, India';
+    'TyG index, HbA1c, ADA 2026, diabetes risk, lipotoxicity, glucotoxicity, waist circumference, India';
 
-  const abstract = `Objective: To evaluate the correlation between triglyceride-glucose (TyG) index and glycated hemoglobin (HbA1c) in Indian adults.
+  const abstract = `Objective: To evaluate the correlation between triglyceride-glucose (TyG) index and HbA1c-based diabetes risk stratification per ADA 2026 guidelines in Indian adults.
 
-Methods: This cross-sectional study was conducted at HOMA Clinic, Hyderabad. A total of ${n} adult patients with both TyG index and HbA1c measurements were included. TyG index was calculated as ln(fasting triglycerides × fasting glucose / 2). Pearson correlation coefficient was calculated.
+Methods: This cross-sectional study was conducted at HOMA Clinic, Hyderabad. A total of ${n} adult patients with both TyG index and HbA1c measurements were included. TyG index was calculated as ln(fasting triglycerides × fasting glucose / 2). Diabetes risk was stratified by HbA1c: Normal (<5.7%), Prediabetes (5.7–6.4%), Diabetes (6.5–7.9%), Very High (≥8.0%).
 
-Results: Mean age was ${meanAge.toFixed(1)} years. Mean TyG index was ${meanTyGForText.toFixed(2)}. Mean HbA1c was ${stats.meanHbA1c.toFixed(1)}%. Elevated HbA1c (≥7.0%) was observed in ${stats.countHbA1cAtLeast7} patients (${stats.pctHbA1cAtLeast7.toFixed(1)}%). Pearson correlation analysis revealed a ${corrDir} correlation between TyG index and HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, P ${pStr}).
+Results: Mean age was ${meanAge.toFixed(1)} years. Diabetes risk distribution: Normal ${diabetesStats.normalPct}%, Prediabetes ${diabetesStats.prediabetesPct}%, Diabetes ${diabetesStats.diabetesPct}%, Very High ${diabetesStats.veryHighPct}%. Pearson correlation analysis revealed a significant ${corrDir} correlation between TyG index and HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, P ${pValue < 0.001 ? '< 0.001' : `= ${pValue.toFixed(3)}`}).
 
-Conclusion: TyG index shows significant correlation with HbA1c in Indian adults. As a simple, cost-effective marker derived from routine fasting tests, TyG index may serve as a practical screening tool for identifying individuals with poor glycemic control.`;
+Conclusion: TyG index correlates significantly with ADA 2026 diabetes risk categories. Waist circumference predicts both lipotoxicity (TG≥220) and glucotoxicity (HbA1c≥8.0), supporting TyG as a practical screening tool for metabolic risk.`;
 
   const introduction = `Insulin resistance (IR) is a key pathophysiological mechanism underlying type 2 diabetes mellitus and metabolic syndrome. Early identification of IR is crucial for preventive interventions.
 
@@ -171,6 +175,12 @@ Metabolic Parameters:
 Glycemic Control:
 - HbA1c ≥7.0%: ${stats.countHbA1cAtLeast7} patients (${stats.pctHbA1cAtLeast7.toFixed(1)}%)
 - HbA1c <7.0%: ${hba1cBelow7} patients (${pctBelow7}%)
+
+ADA 2026 Diabetes Risk (HbA1c only):
+- Normal (<5.7%): ${withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Normal').length} (${n > 0 ? ((withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Normal').length / n) * 100).toFixed(1) : '0'}%)
+- Prediabetes (5.7–6.4%): ${withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Prediabetes').length} (${n > 0 ? ((withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Prediabetes').length / n) * 100).toFixed(1) : '0'}%)
+- Diabetes (6.5–7.9%): ${withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Diabetes').length} (${n > 0 ? ((withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Diabetes').length / n) * 100).toFixed(1) : '0'}%)
+- Very High (≥8.0%): ${withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Very High').length} (${n > 0 ? ((withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Very High').length / n) * 100).toFixed(1) : '0'}%)
 
 Correlation Analysis:
 Pearson correlation analysis revealed a ${corrDir} correlation between TyG index and HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, P ${pStr}). This indicates that ${stats.tygHbA1cR > 0 ? 'higher' : 'lower'} TyG index values are associated with ${stats.tygHbA1cR > 0 ? 'higher' : 'lower'} HbA1c levels. See Table 1 and Figures 1–3.`;

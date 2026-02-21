@@ -6,7 +6,7 @@ type PatientWithStatus = Patient & { status?: string };
 export function exportCSV(patients: PatientWithStatus[], filename: string): void {
   const rows = getAnonymizedTable1Data(patients);
   if (rows.length === 0) {
-    const headers = ['id', 'age', 'sex', 'tg', 'glucose', 'hdl', 'waist', 'tyg', 'risk'];
+    const headers = ['id', 'age', 'sex', 'tg', 'glucose', 'hdl', 'waist', 'tyg', 'risk', 'hba1c', 'diabetesRisk'];
     const csv = headers.join(',') + '\n';
     downloadBlob(csv, filename, 'text/csv');
     return;

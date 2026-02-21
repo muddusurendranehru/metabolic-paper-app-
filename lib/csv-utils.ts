@@ -85,11 +85,15 @@ export function parseCsvToPatients(csv: string): Partial<PatientRow>[] {
       else if (h === "hdl") row.hdl = parseFloat(val) || 0;
       else if (h === "waist") row.waist = parseFloat(val) || 0;
       else if (h === "tyg") row.tyg = parseFloat(val) || 0;
-      else if (h === "risk") row.risk = (val === "High" ? "High" : val === "Moderate" ? "Moderate" : "Normal") as PatientRow["risk"];
+      else if (h === "risk") row.risk = (val === "High" ? "High" : val === "Moderate" ? "Moderate" : val === "Pending" ? "Pending" : "Normal") as PatientRow["risk"];
       else if (h === "id") row.id = val;
       else if (h === "hba1c" || h === "hba1c (%)") {
         const n = parseFloat(val);
         row.hba1c = Number.isFinite(n) ? n : undefined;
+      }
+      else if (h === "diabetesrisk") {
+        const v = val as PatientRow["diabetesRisk"];
+        if (["Normal", "Prediabetes", "Diabetes", "Very High", "Pending"].includes(val)) row.diabetesRisk = v;
       }
     });
     rows.push(row);

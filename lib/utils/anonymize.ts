@@ -1,4 +1,5 @@
 import type { Patient } from '@/lib/types/patient';
+import { getDiabetesRisk } from '@/lib/utils/diabetes-risk';
 
 type PatientWithStatus = Patient & { status?: string };
 
@@ -29,5 +30,7 @@ export function getAnonymizedTable1Data(patients: PatientWithStatus[]) {
     waist: p.waist,
     tyg: p.tyg,
     risk: p.risk,
+    hba1c: p.hba1c ?? undefined,
+    diabetesRisk: getDiabetesRisk(p.hba1c),
   }));
 }

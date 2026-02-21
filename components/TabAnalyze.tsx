@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Chart, registerables } from "chart.js";
 import { downloadCSV } from "@/lib/csv-utils";
 import type { PatientRow } from "@/lib/tyg";
+import { getDiabetesRisk, getDiabetesRiskStats, getDiabetesRiskByTyG } from "@/lib/utils/diabetes-risk";
 
 Chart.register(...registerables);
 
@@ -215,6 +216,94 @@ TyG index correlates with waist circumference and metabolic risk.
           </div>
         </div>
       </div>
+
+      <div className="bg-amber-50 p-4 rounded-lg mb-6">
+        <h3 className="font-bold text-amber-900 mb-2">🩸 ADA 2026 Diabetes Risk (HbA1c)</h3>
+        <p className="text-xs text-amber-800 mb-2">Normal &lt;5.7% · Prediabetes 5.7–6.4% · Diabetes 6.5–7.9% · Very High ≥8.0% · Pending (no HbA1c)</p>
+        <div className="grid grid-cols-5 gap-4 text-sm">
+          {(["Normal", "Prediabetes", "Diabetes", "Very High", "Pending"] as const).map((level) => {
+            const count = patientData.filter((p) => getDiabetesRisk(p.hba1c) === level).length;
+            const pct = patientData.length > 0 ? ((count / patientData.length) * 100).toFixed(1) : "0";
+            return (
+              <div key={level}>
+                <p className="text-gray-600">{level}</p>
+                <p className="text-xl font-bold">
+                  {count} <span className="text-gray-500 font-normal">({pct}%)</span>
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ADA 2026 Diabetes Risk Stratification – summary cards + by TyG */}
+      {patientData.length > 0 && (() => {
+        const diabetesStats = getDiabetesRiskStats(patientData);
+        const diabetesByTyG = getDiabetesRiskByTyG(patientData);
+        return (
+          <div className="mb-8">
+            <h3 className="font-bold text-xl text-indigo-900 mb-4">📊 ADA 2026 Diabetes Risk Stratification</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              <div className="p-4 bg-green-50 rounded-lg text-center border border-green-200">
+                <p className="text-sm text-gray-600">Normal (&lt;5.7%)</p>
+                <p className="text-2xl font-bold text-green-900">{diabetesStats.normal}</p>
+                <p className="text-xs text-green-700">{diabetesStats.normalPct}%</p>
+              </div>
+              <div className="p-4 bg-yellow-50 rounded-lg text-center border border-yellow-200">
+                <p className="text-sm text-gray-600">Prediabetes (5.7–6.4%)</p>
+                <p className="text-2xl font-bold text-yellow-900">{diabetesStats.prediabetes}</p>
+                <p className="text-xs text-yellow-700">{diabetesStats.prediabetesPct}%</p>
+              </div>
+              <div className="p-4 bg-orange-50 rounded-lg text-center border border-orange-200">
+                <p className="text-sm text-gray-600">Diabetes (6.5–7.9%)</p>
+                <p className="text-2xl font-bold text-orange-900">{diabetesStats.diabetes}</p>
+                <p className="text-xs text-orange-700">{diabetesStats.diabetesPct}%</p>
+              </div>
+              <div className="p-4 bg-red-900 rounded-lg text-center border border-red-900">
+                <p className="text-sm text-gray-300">Very High (≥8.0%)</p>
+                <p className="text-2xl font-bold text-white">{diabetesStats.veryHigh}</p>
+                <p className="text-xs text-red-200">{diabetesStats.veryHighPct}%</p>
+              </div>
+            </div>
+            <div className="border rounded-lg p-4 bg-white">
+              <h4 className="font-semibold mb-3">Diabetes Risk by TyG Risk Category</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border">
+                  <thead className="bg-indigo-50">
+                    <tr>
+                      <th className="p-2 border">TyG Risk</th>
+                      <th className="p-2 border">Total</th>
+                      <th className="p-2 border bg-green-50">Normal</th>
+                      <th className="p-2 border bg-yellow-50">Prediabetes</th>
+                      <th className="p-2 border bg-orange-50">Diabetes</th>
+                      <th className="p-2 border bg-red-900 text-white">Very High</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(["Normal", "Moderate", "High", "Pending"] as const).map((tygRisk) => {
+                      const data = diabetesByTyG[tygRisk];
+                      if (!data) return null;
+                      return (
+                        <tr key={tygRisk} className="hover:bg-gray-50">
+                          <td className="p-2 border font-medium">{tygRisk}</td>
+                          <td className="p-2 border">{data.total}</td>
+                          <td className="p-2 border bg-green-50/50">{data.normal > 0 ? data.normal : "—"}</td>
+                          <td className="p-2 border bg-yellow-50/50">{data.prediabetes > 0 ? data.prediabetes : "—"}</td>
+                          <td className="p-2 border bg-orange-50/50">{data.diabetes > 0 ? data.diabetes : "—"}</td>
+                          <td className="p-2 border bg-red-900/10 text-red-900">{data.veryHigh > 0 ? data.veryHigh : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                * Based on ADA 2026 Guidelines: HbA1c thresholds (waist circumference not used for diabetes risk).
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="flex gap-4">
         <button

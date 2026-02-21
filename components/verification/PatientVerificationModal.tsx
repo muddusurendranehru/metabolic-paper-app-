@@ -5,6 +5,7 @@ import { PATIENT_FIELDS } from "@/config/fields";
 import type { PatientRow } from "@/lib/tyg";
 import { calcTyG } from "@/lib/tyg";
 import { assessRisk } from "@/lib/utils/risk-assessor";
+import { updatePatientDiabetesRisk, getDiabetesRisk, getDiabetesRiskColor } from "@/lib/utils/diabetes-risk";
 import { FieldEditor } from "./FieldEditor";
 
 interface PatientVerificationModalProps {
@@ -21,13 +22,18 @@ export function PatientVerificationModal({
   const [edited, setEdited] = useState<PatientRow>({ ...patient });
 
   const handleChange = (key: keyof PatientRow, value: string | number) => {
-    const next = { ...edited, [key]: value };
+    let next = { ...edited, [key]: value };
     if (key === "tg" || key === "glucose") {
       next.tyg = Math.round(calcTyG(next.tg, next.glucose) * 100) / 100;
       next.risk = assessRisk(next.tyg, next.waist);
     }
     if (key === "waist") {
       next.risk = assessRisk(next.tyg, Number(value));
+    }
+    if (key === "hba1c") {
+      const num = typeof value === "number" ? value : parseFloat(String(value));
+      next.hba1c = Number.isFinite(num) ? num : undefined;
+      next = updatePatientDiabetesRisk(next) as PatientRow;
     }
     setEdited(next);
   };
@@ -38,7 +44,7 @@ export function PatientVerificationModal({
         <h3 className="mb-4 text-lg font-bold">Verify Patient</h3>
         <div className="space-y-3">
           {PATIENT_FIELDS.filter((f) =>
-            ["name", "age", "sex", "tg", "glucose", "hdl", "waist"].includes(f.key)
+            ["name", "age", "sex", "tg", "glucose", "hdl", "waist", "hba1c"].includes(f.key)
           ).map((f) => (
             <div key={f.key}>
               <label className="mb-1 block text-xs font-medium text-gray-600">
@@ -58,8 +64,22 @@ export function PatientVerificationModal({
               />
             </div>
           ))}
-          <div className="text-sm text-gray-500">
-            TyG: {edited.tyg.toFixed(2)} | Risk: {edited.risk}
+          <div className="text-sm text-gray-500 flex flex-wrap items-center gap-2">
+            <span>TyG: {edited.tyg.toFixed(2)}</span>
+            <span>|</span>
+            <span>Risk: {edited.risk}</span>
+            {(() => {
+              const diabetesRisk = edited.diabetesRisk ?? getDiabetesRisk(edited.hba1c);
+              return (
+                <>
+                  <span>|</span>
+                  <span>Diabetes:</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium border ${getDiabetesRiskColor(diabetesRisk)}`}>
+                    {diabetesRisk}
+                  </span>
+                </>
+              );
+            })()}
           </div>
         </div>
         <div className="mt-6 flex gap-2">
