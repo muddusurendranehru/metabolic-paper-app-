@@ -8,7 +8,7 @@ export async function exportPDF(element: HTMLElement, filename: string): Promise
   const { jsPDF } = await import('jspdf');
 
   const canvas = await html2canvas(element, {
-    scale: 2,
+    scale: 3,
     useCORS: true,
     logging: false,
   });

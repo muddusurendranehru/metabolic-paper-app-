@@ -2,7 +2,8 @@ import type { Patient } from '@/lib/types/patient';
 
 export function calculateStats(patients: (Patient & { status?: string })[]) {
   const verified = patients.filter(p => p.status === 'verified');
-  const n = verified.length;
+  const useForStats = verified.length > 0 ? verified : patients;
+  const n = useForStats.length;
 
   if (n === 0) {
     return {
@@ -24,12 +25,12 @@ export function calculateStats(patients: (Patient & { status?: string })[]) {
   }
 
   const sum = (field: keyof Patient) =>
-    verified.reduce((s, p) => s + (p[field] as number || 0), 0);
+    useForStats.reduce((s, p) => s + (p[field] as number || 0), 0);
 
   const avg = (field: keyof Patient) => sum(field) / n;
 
-  const tygValues = verified.map(p => p.tyg || 0).filter(v => v > 0);
-  const waistValues = verified.map(p => p.waist || 0).filter(v => v > 0);
+  const tygValues = useForStats.map(p => p.tyg || 0).filter(v => v > 0);
+  const waistValues = useForStats.map(p => p.waist || 0).filter(v => v > 0);
 
   const correlationR = calculateCorrelation(tygValues, waistValues);
   const pValue = calculatePValue(correlationR, n);
@@ -42,11 +43,11 @@ export function calculateStats(patients: (Patient & { status?: string })[]) {
     avgGlucose: avg('glucose'),
     avgTG: avg('tg'),
     avgHDL: avg('hdl'),
-    highRisk: verified.filter(p => p.risk === 'High').length,
-    moderateRisk: verified.filter(p => p.risk === 'Moderate').length,
-    normalRisk: verified.filter(p => p.risk === 'Normal').length,
-    maleCount: verified.filter(p => p.sex === 'M').length,
-    femaleCount: verified.filter(p => p.sex === 'F').length,
+    highRisk: useForStats.filter(p => p.risk === 'High').length,
+    moderateRisk: useForStats.filter(p => p.risk === 'Moderate').length,
+    normalRisk: useForStats.filter(p => p.risk === 'Normal').length,
+    maleCount: useForStats.filter(p => p.sex === 'M').length,
+    femaleCount: useForStats.filter(p => p.sex === 'F').length,
     correlationR,
     pValue,
   };

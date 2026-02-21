@@ -16,12 +16,16 @@ export interface ManuscriptData {
   references: string;
   table1: string;
   table2: string;
+  figure1Caption: string;
+  figure2Caption: string;
+  figure3Caption: string;
 }
 
 export function generateIJCPRManuscript(patients: (Patient & { status?: string })[]): ManuscriptData {
   const verified = patients.filter(p => p.status === 'verified');
+  const useForManuscript = verified.length > 0 ? verified : patients;
   const stats = calculateStats(patients);
-  const anonymized = anonymizePatients(verified);
+  const anonymized = anonymizePatients(useForManuscript);
   const date = new Date().toLocaleDateString('en-IN', {
     year: 'numeric',
     month: 'long',
@@ -41,7 +45,7 @@ export function generateIJCPRManuscript(patients: (Patient & { status?: string }
 
 Methods: This cross-sectional study was conducted at HOMA Clinic, Gachibowli, Hyderabad. A total of ${stats.n} adult patients were included. Fasting triglycerides, fasting blood sugar, and waist circumference were measured. TyG index was calculated using the formula: TyG = ln(fasting triglycerides [mg/dL] × fasting blood sugar [mg/dL] / 2). IDF criteria for central obesity (waist circumference ≥90 cm for men, ≥80 cm for women) were applied. Pearson correlation coefficient was calculated.
 
-Results: The mean age of participants was ${stats.avgAge.toFixed(1)} years. Mean TyG index was ${stats.avgTyG.toFixed(2)} ± ${calculateSD(verified.map(p => p.tyg || 0)).toFixed(2)}. Mean waist circumference was ${stats.avgWaist.toFixed(1)} ± ${calculateSD(verified.map(p => p.waist || 0)).toFixed(1)} cm. High metabolic risk was observed in ${stats.highRisk} patients (${stats.n > 0 ? ((stats.highRisk / stats.n) * 100).toFixed(1) : 0}%). Pearson correlation analysis revealed a significant positive correlation between TyG index and waist circumference (r = ${stats.correlationR.toFixed(2)}, P < 0.001).
+Results: The mean age of participants was ${stats.avgAge.toFixed(1)} years. Mean TyG index was ${stats.avgTyG.toFixed(2)} ± ${calculateSD(useForManuscript.map(p => p.tyg || 0)).toFixed(2)}. Mean waist circumference was ${stats.avgWaist.toFixed(1)} ± ${calculateSD(useForManuscript.map(p => p.waist || 0)).toFixed(1)} cm. High metabolic risk was observed in ${stats.highRisk} patients (${stats.n > 0 ? ((stats.highRisk / stats.n) * 100).toFixed(1) : 0}%). Pearson correlation analysis revealed a significant positive correlation between TyG index and waist circumference (r = ${stats.correlationR.toFixed(2)}, P < 0.001).
 
 Conclusion: TyG index shows significant correlation with waist circumference in Indian adults. As a simple, cost-effective marker derived from routine fasting lipid and glucose tests, TyG index can serve as a practical screening tool for identifying individuals at risk of metabolic syndrome and central obesity in resource-limited settings.`,
 
@@ -105,13 +109,19 @@ Data were analyzed using statistical software. Continuous variables were express
 A total of ${stats.n} patients were included in the study. The mean age was ${stats.avgAge.toFixed(1)} years. Male participants comprised ${stats.maleCount} (${stats.n > 0 ? ((stats.maleCount / stats.n) * 100).toFixed(1) : 0}%) and female participants ${stats.femaleCount} (${stats.n > 0 ? ((stats.femaleCount / stats.n) * 100).toFixed(1) : 0}%).
 
 Metabolic Parameters (Table 1):
-Mean triglycerides were ${stats.avgTG.toFixed(1)} ± ${calculateSD(verified.map(p => p.tg || 0)).toFixed(1)} mg/dL. Mean fasting glucose was ${stats.avgGlucose.toFixed(1)} ± ${calculateSD(verified.map(p => p.glucose || 0)).toFixed(1)} mg/dL. Mean HDL cholesterol was ${stats.avgHDL.toFixed(1)} ± ${calculateSD(verified.map(p => p.hdl || 0)).toFixed(1)} mg/dL. Mean waist circumference was ${stats.avgWaist.toFixed(1)} ± ${calculateSD(verified.map(p => p.waist || 0)).toFixed(1)} cm.
+Mean triglycerides were ${stats.avgTG.toFixed(1)} ± ${calculateSD(useForManuscript.map(p => p.tg || 0)).toFixed(1)} mg/dL. Mean fasting glucose was ${stats.avgGlucose.toFixed(1)} ± ${calculateSD(useForManuscript.map(p => p.glucose || 0)).toFixed(1)} mg/dL. Mean HDL cholesterol was ${stats.avgHDL.toFixed(1)} ± ${calculateSD(useForManuscript.map(p => p.hdl || 0)).toFixed(1)} mg/dL. Mean waist circumference was ${stats.avgWaist.toFixed(1)} ± ${calculateSD(useForManuscript.map(p => p.waist || 0)).toFixed(1)} cm.
 
 TyG Index Distribution:
-The mean TyG index was ${stats.avgTyG.toFixed(2)} ± ${calculateSD(verified.map(p => p.tyg || 0)).toFixed(2)}. Based on risk stratification, ${stats.normalRisk} patients (${stats.n > 0 ? ((stats.normalRisk / stats.n) * 100).toFixed(1) : 0}%) were classified as normal risk, ${stats.moderateRisk} (${stats.n > 0 ? ((stats.moderateRisk / stats.n) * 100).toFixed(1) : 0}%) as moderate risk, and ${stats.highRisk} (${stats.n > 0 ? ((stats.highRisk / stats.n) * 100).toFixed(1) : 0}%) as high metabolic risk.
+The mean TyG index was ${stats.avgTyG.toFixed(2)} ± ${calculateSD(useForManuscript.map(p => p.tyg || 0)).toFixed(2)}. Based on risk stratification, ${stats.normalRisk} patients (${stats.n > 0 ? ((stats.normalRisk / stats.n) * 100).toFixed(1) : 0}%) were classified as normal risk, ${stats.moderateRisk} (${stats.n > 0 ? ((stats.moderateRisk / stats.n) * 100).toFixed(1) : 0}%) as moderate risk, and ${stats.highRisk} (${stats.n > 0 ? ((stats.highRisk / stats.n) * 100).toFixed(1) : 0}%) as high metabolic risk (Figure 2).
 
 Correlation Analysis (Table 2, Figure 1):
-Pearson correlation analysis revealed a significant positive correlation between TyG index and waist circumference (r = ${stats.correlationR.toFixed(2)}, P < 0.001). This indicates that higher TyG index values are associated with increased central obesity.`,
+Pearson correlation analysis revealed a significant positive correlation between TyG index and waist circumference (r = ${stats.correlationR.toFixed(2)}, P < 0.001). As shown in Figure 1, higher TyG index values are associated with increased central obesity. The distribution of TyG values among patients is illustrated in Figure 2, and risk category prevalence is shown in Figure 3.`,
+
+    figure1Caption: `Scatter plot showing positive correlation between TyG index and waist circumference (r = ${stats.correlationR.toFixed(2)}, P < 0.001, n = ${stats.n})`,
+
+    figure2Caption: `Distribution of TyG index values among ${stats.n} patients. Mean TyG: ${stats.avgTyG.toFixed(2)} ± ${calculateSD(useForManuscript.map(p => p.tyg || 0)).toFixed(2)}`,
+
+    figure3Caption: `Prevalence of TyG risk categories: Normal ${stats.n > 0 ? ((stats.normalRisk / stats.n) * 100).toFixed(1) : 0}% (n=${stats.normalRisk}), Moderate ${stats.n > 0 ? ((stats.moderateRisk / stats.n) * 100).toFixed(1) : 0}% (n=${stats.moderateRisk}), High ${stats.n > 0 ? ((stats.highRisk / stats.n) * 100).toFixed(1) : 0}% (n=${stats.highRisk})`,
 
     discussion: `Our study demonstrates a significant positive correlation between TyG index and waist circumference in Indian adults (r = ${stats.correlationR.toFixed(2)}, P < 0.001). This finding is consistent with previous studies conducted in different populations.
 

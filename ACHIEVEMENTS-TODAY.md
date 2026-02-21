@@ -59,7 +59,12 @@ Everything is working. **Step 1 has an editable master table** – if Tesseract 
 
 ## Today's Session Highlights
 
-**Latest (CSV import + server check):**
+**Latest (Word export fix + server check):**
+1. **Export Word – no blank doc** – IJCPR manuscript now always exports with tables and text; charts are converted to PNG via `svgToPngBase64` and embedded with docx `ImageRun`. If figure embedding fails, export falls back to document without images so the file is never empty. `buildIJCPRChildren` uses safe strings and validates PNG base64 before embedding.
+2. **Export filenames and quality** – Export Word downloads `tyd-ijcpr-manuscript.docx` (Tables + 3 embedded figures). Export PDF downloads `tyd-ijcpr-manuscript.pdf` at scale 3 for publication quality. Export All Figures downloads `figure1-tyg-vs-waist.png`, `figure2-tyg-distribution.png`, `figure3-risk-stratification.png` (300 DPI).
+3. **Server check** – Run `npm run dev` (port 3030) to verify Step 5 Export Word, Export PDF, and Export All Figures locally. Build may show font/network warnings in sandbox; run locally for full check.
+
+**Earlier (CSV import + server check):**
 1. **CSV import backup** – Step 1 (Extract): "Import CSV Backup" next to Download CSV; `handleImportCSV` parses CSV with `parseCsvToPatients`, maps to full `PatientRow` (tyg/risk from `calcTyG`/`calcRisk`), merges into current list. Use if data is lost after browser close.
 2. **Parser** – `parseCsvToPatients` in `lib/csv-utils.ts` now maps risk "Moderate" correctly (High/Moderate/Normal). Import accepts CSVs with id, name, age, sex, tg, glucose, hdl, waist, tyg, risk (case-insensitive headers).
 3. **Server & push** – Build passes (`npm run build`). Run `npm run dev` (port 3030) to check locally. Changes pushed to GitHub.

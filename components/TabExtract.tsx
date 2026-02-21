@@ -14,6 +14,7 @@ export function TabExtract({
 }) {
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [llmProcessing, setLlmProcessing] = useState(false);
   const [editingCell, setEditingCell] = useState<{ rowIdx: number; col: string } | null>(null);
   const [editValue, setEditValue] = useState("");
   const [manualValues, setManualValues] = useState({
@@ -152,6 +153,45 @@ export function TabExtract({
     }
   };
 
+  const handleLLMExtract = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || file.type !== "application/pdf") return;
+    setLlmProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/llm-extract", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data?.error || "LLM extraction failed. Try OCR or manual add.");
+        return;
+      }
+      const tg = data.tg ?? (parseFloat(manualValues.tg) || 0);
+      const glucose = data.glucose ?? (parseFloat(manualValues.glucose) || 0);
+      const tyg = tg > 0 && glucose > 0 ? Math.round(Math.log((tg * glucose) / 2) * 100) / 100 : 0;
+      const risk = tyg >= 9.5 ? "High" : tyg >= 8.5 ? "Moderate" : "Normal";
+      const newRow: PatientRow = {
+        id: file.name + "-llm-" + Date.now(),
+        name: data.name || manualValues.name || file.name.replace(/\.pdf$/i, "") || "Patient",
+        age: data.age ?? (manualValues.age ? parseInt(manualValues.age, 10) : 0),
+        sex: data.sex || manualValues.sex || "M",
+        tg,
+        glucose,
+        hdl: data.hdl ?? (parseFloat(manualValues.hdl) || 0),
+        waist: parseFloat(manualValues.waist) || 0,
+        tyg,
+        risk,
+      };
+      setPatientData((prev) => [...prev, newRow]);
+      alert("Extracted 1 patient via LLM.");
+    } catch {
+      alert("LLM extraction failed. Try OCR or manual add.");
+    } finally {
+      setLlmProcessing(false);
+    }
+  };
+
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -267,6 +307,23 @@ export function TabExtract({
         <p className="text-sm text-gray-500 mt-2">
           Uses Tesseract OCR. If OCR fails, edit the table below directly.
         </p>
+        <div className="mt-3">
+          <input
+            type="file"
+            accept=".pdf"
+            onChange={handleLLMExtract}
+            className="hidden"
+            id="pdf-llm-upload"
+            disabled={llmProcessing}
+          />
+          <label
+            htmlFor="pdf-llm-upload"
+            className={`inline-block px-4 py-2 rounded font-medium ${llmProcessing ? "bg-gray-300 cursor-not-allowed" : "bg-amber-100 text-amber-900 hover:bg-amber-200 cursor-pointer"}`}
+          >
+            {llmProcessing ? "Extracting…" : "Extract with LLM (fallback)"}
+          </label>
+          <p className="text-sm text-gray-500 mt-1">One PDF at a time. Requires OPENAI_API_KEY.</p>
+        </div>
       </div>
 
       {/* Manual Entry - Add New Row */}
@@ -394,7 +451,7 @@ export function TabExtract({
                 </thead>
                 <tbody>
                   {patientData.map((p, i) => (
-                    <tr key={p.id} className="hover:bg-gray-50">
+                    <tr key={`${p.id}-${i}`} className="hover:bg-gray-50">
                       <td className="p-2 border">
                         <EditableCell rowIdx={i} field="name" value={p.name} />
                       </td>

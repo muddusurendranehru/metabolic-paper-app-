@@ -1,13 +1,21 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import type { Patient } from '@/lib/types/patient';
 import { generateManuscriptTemplate } from '@/lib/utils/manuscript-template';
+import { generateIJCPRManuscript } from '@/lib/utils/ijcpr-manuscript';
 import { getAnonymizedTable1Data } from '@/lib/utils/anonymize';
 import { calculateStats } from '@/lib/utils/stats-calculator';
 import { exportCSV } from '@/lib/utils/csv-export';
 import { exportPDF } from '@/lib/utils/pdf-export';
 import { exportWord } from '@/lib/utils/word-export';
+import {
+  generateScatterPlotSVG,
+  generateHistogramSVG,
+  generateRiskBarChartSVG,
+  svgToPng,
+  svgToPngBase64,
+} from '@/lib/utils/chart-svg';
 
 type PatientWithStatus = Patient & { status?: string };
 
@@ -21,9 +29,21 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
   const [isEditing, setIsEditing] = useState<Record<string, boolean>>({});
   const manuscriptRef = useRef<HTMLDivElement>(null);
 
-  const stats = calculateStats(patientData);
-  const table1Data = getAnonymizedTable1Data(patientData);
-  const verified = patientData.filter((p: PatientWithStatus) => p.status === 'verified');
+  const verified = patientData.filter((p: PatientWithStatus) => p.status === "verified");
+  const effectivePatients = verified.length > 0 ? verified : patientData;
+  const stats = calculateStats(effectivePatients);
+  const table1Data = getAnonymizedTable1Data(effectivePatients);
+  const ijcprManuscript = useMemo(() => generateIJCPRManuscript(effectivePatients), [effectivePatients]);
+
+  const handleExportFigures = async () => {
+    const scatterSVG = generateScatterPlotSVG(effectivePatients);
+    await svgToPng(scatterSVG, 'figure1-tyg-vs-waist.png');
+    const histogramSVG = generateHistogramSVG(effectivePatients);
+    await svgToPng(histogramSVG, 'figure2-tyg-distribution.png');
+    const riskChartSVG = generateRiskBarChartSVG(effectivePatients);
+    await svgToPng(riskChartSVG, 'figure3-risk-stratification.png');
+    alert('✅ All 3 figures exported (300 DPI PNG)');
+  };
 
   const handleEdit = (section: string) => {
     setIsEditing(prev => ({ ...prev, [section]: true }));
@@ -38,17 +58,30 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
   };
 
   const handleExportWord = async () => {
-    await exportWord(verified, manuscript, 'tyg-study-manuscript.docx');
+    let figurePngBase64: { fig1: string; fig2: string; fig3: string } | undefined;
+    try {
+      const fig1 = await svgToPngBase64(generateScatterPlotSVG(effectivePatients));
+      const fig2 = await svgToPngBase64(generateHistogramSVG(effectivePatients));
+      const fig3 = await svgToPngBase64(generateRiskBarChartSVG(effectivePatients));
+      if (fig1 && fig2 && fig3) {
+        figurePngBase64 = { fig1, fig2, fig3 };
+      }
+    } catch (e) {
+      console.warn('Chart-to-PNG failed, exporting Word without figures:', e);
+    }
+    await exportWord(effectivePatients, ijcprManuscript, 'tyd-ijcpr-manuscript.docx', {
+      figurePngBase64,
+    });
   };
 
   const handleExportPDF = async () => {
     if (manuscriptRef.current) {
-      await exportPDF(manuscriptRef.current, 'tyg-study-manuscript.pdf');
+      await exportPDF(manuscriptRef.current, 'tyd-ijcpr-manuscript.pdf');
     }
   };
 
   const handleExportCSV = () => {
-    exportCSV(verified, 'tyg-study-anonymized.csv');
+    exportCSV(effectivePatients, 'tyg-study-anonymized.csv');
   };
 
   const SectionEditor = ({
@@ -141,7 +174,16 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
       </div>
 
       {/* Export Buttons */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <button
+          type="button"
+          onClick={handleExportFigures}
+          className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100"
+        >
+          <p className="text-2xl mb-2">📊</p>
+          <p className="font-bold text-indigo-900">Export All Figures</p>
+          <p className="text-sm text-indigo-700">3 PNG (300 DPI)</p>
+        </button>
         <button
           type="button"
           onClick={handleExportWord}
@@ -169,6 +211,31 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
           <p className="font-bold text-green-900">Export CSV</p>
           <p className="text-sm text-green-700">Anonymized data</p>
         </button>
+      </div>
+
+      {/* Figures Preview */}
+      <div className="mb-8">
+        <h3 className="font-bold text-xl text-indigo-900 mb-4">Figures Preview</h3>
+        <div className="space-y-6">
+          <div className="border rounded-lg p-4 bg-white">
+            <div dangerouslySetInnerHTML={{ __html: generateScatterPlotSVG(effectivePatients) }} />
+            <p className="text-sm text-gray-600 mt-2 italic">
+              <strong>Figure 1:</strong> {ijcprManuscript.figure1Caption}
+            </p>
+          </div>
+          <div className="border rounded-lg p-4 bg-white">
+            <div dangerouslySetInnerHTML={{ __html: generateHistogramSVG(effectivePatients) }} />
+            <p className="text-sm text-gray-600 mt-2 italic">
+              <strong>Figure 2:</strong> {ijcprManuscript.figure2Caption}
+            </p>
+          </div>
+          <div className="border rounded-lg p-4 bg-white">
+            <div dangerouslySetInnerHTML={{ __html: generateRiskBarChartSVG(effectivePatients) }} />
+            <p className="text-sm text-gray-600 mt-2 italic">
+              <strong>Figure 3:</strong> {ijcprManuscript.figure3Caption}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Manuscript Preview */}
