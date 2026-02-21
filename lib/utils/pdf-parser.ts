@@ -1,11 +1,11 @@
 /**
  * Extract text from PDF (pdf.js via pdf-parse) and apply regex for TyG fields.
  * Used by LLM-extract API as text source and regex fallback.
+ * extractTextFromPdfBuffer uses pdfjs-dist for digital PDFs.
  */
 
 import { parseAge } from "./age-parser";
 
-// Same pattern style as OCR route; no changes to app/api/ocr/route.ts
 const PATTERNS = {
   tg: [
     /triglycerides?\s*[:\s|\-]*(\d{2,3})/i,
@@ -61,6 +61,12 @@ function extractText(text: string, patterns: RegExp[]): string | null {
   return null;
 }
 
+/** Extract raw text from a PDF buffer (all pages). Uses same pdf-parse as extractTextFromPdf. */
+export async function extractTextFromPdfBuffer(buffer: ArrayBuffer): Promise<string> {
+  const buf = Buffer.from(buffer);
+  return extractTextFromPdf(buf);
+}
+
 export type PdfExtractResult = {
   name: string | null;
   age: number | null;
@@ -72,6 +78,15 @@ export type PdfExtractResult = {
   risk: string;
   ocrSuccess: boolean;
 };
+
+export interface ExtractedLabFields {
+  name: string | null;
+  age: number | null;
+  sex: string | null;
+  tg: number | null;
+  glucose: number | null;
+  hdl: number | null;
+}
 
 /**
  * Extract raw text from PDF buffer. Uses pdf-parse (pdf.js).
@@ -134,4 +149,24 @@ export async function extractStructuredFromPdf(buffer: Buffer): Promise<{
   };
 
   return { text: fullText.trim(), data };
+}
+
+/** Run regex extraction on text (same style as OCR). Use with parseAge for age strings like "74 Y 0 M 0 D". */
+export function extractStructuredFromText(
+  text: string,
+  parseAgeFn?: (s: string | null) => number | null
+): ExtractedLabFields {
+  const normalized = text.replace(/\s+/g, " ");
+  const ageFromRegex = extractValue(normalized, PATTERNS.age);
+  const ageStr = text.match(/age\s*[:\s\-]*([^\n]+)/i)?.[1]?.trim();
+  const age = parseAgeFn && ageStr ? parseAgeFn(ageStr) : ageFromRegex;
+
+  return {
+    name: extractText(normalized, PATTERNS.name),
+    age,
+    sex: extractText(normalized, PATTERNS.sex),
+    tg: extractValue(normalized, PATTERNS.tg),
+    glucose: extractValue(normalized, PATTERNS.glucose),
+    hdl: extractValue(normalized, PATTERNS.hdl),
+  };
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Tesseract from "tesseract.js";
 import { fromBuffer as pdf2picFromBuffer } from "pdf2pic";
+import { extractWithLLM, parseAge } from "@/lib/utils/llm-extract";
 
 export const runtime = "nodejs";
 
@@ -136,6 +137,24 @@ export async function POST(req: NextRequest) {
           if (tg != null) tg = tg * 88.57;
           if (glucose != null) glucose = glucose * 18;
           if (hdl != null) hdl = hdl * 38.67;
+        }
+
+        // OCR failed to get tg/glucose — try LLM fallback
+        if ((tg === null || glucose === null) && fullText.trim().length >= 50) {
+          try {
+            const llmData = await extractWithLLM(fullText);
+            const lipids = llmData.lipids as Record<string, unknown> | undefined;
+            const llmTg = typeof lipids?.triglycerides === "number" ? (lipids.triglycerides as number) : null;
+            const llmGlucose = typeof llmData.glucose_fbs === "number" ? (llmData.glucose_fbs as number) : null;
+            if (llmTg != null && llmGlucose != null) {
+              tg = llmTg;
+              glucose = llmGlucose;
+              const llmHdl = typeof lipids?.hdl === "number" ? (lipids.hdl as number) : null;
+              if (llmHdl != null) hdl = llmHdl;
+            }
+          } catch (llmError) {
+            console.error("LLM extraction failed:", llmError);
+          }
         }
       }
     }

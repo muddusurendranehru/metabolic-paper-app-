@@ -17,7 +17,7 @@ export function TabVerify({ patientData, setPatientData }: TabVerifyProps) {
 
   const handleSave = (p: PatientRow) => {
     setPatientData((prev) =>
-      prev.map((x) => (x.id === p.id ? p : x))
+      prev.map((x) => (x.id === p.id ? { ...p, status: "verified" as const } : x))
     );
     setModalPatient(null);
   };

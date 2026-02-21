@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import type { Patient } from '@/lib/types/patient';
 import { generateManuscriptTemplate } from '@/lib/utils/manuscript-template';
+import { generateIJCPRManuscript } from '@/lib/utils/ijcpr-manuscript';
 import { getAnonymizedTable1Data } from '@/lib/utils/anonymize';
 import { calculateStats } from '@/lib/utils/stats-calculator';
 import { exportCSV } from '@/lib/utils/csv-export';
 import { exportPDF } from '@/lib/utils/pdf-export';
 import { exportWord } from '@/lib/utils/word-export';
-import { generateIJCPRManuscript } from '@/lib/utils/ijcpr-manuscript';
 import {
   generateHbA1cManuscript,
   filterPatientsWithTyGAndHbA1c,
@@ -20,7 +20,8 @@ import {
   generateHistogramSVG,
   generateRiskBarChartSVG,
   svgToPng,
-} from '@/lib/chart-svg';
+  svgToPngBase64,
+} from '@/lib/utils/chart-svg';
 
 type PatientWithStatus = Patient & { status?: string };
 
@@ -34,12 +35,11 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
   const [isEditing, setIsEditing] = useState<Record<string, boolean>>({});
   const manuscriptRef = useRef<HTMLDivElement>(null);
 
-  const stats = calculateStats(patientData);
-  const table1Data = getAnonymizedTable1Data(patientData);
   const verified = patientData.filter((p: PatientWithStatus) => p.status === 'verified');
-  // Use all patients for export when none are explicitly verified (same as stats)
-  const patientsForExport = verified.length > 0 ? verified : patientData;
-  // Paper 3: patients with both TyG and HbA1c for manuscript/export
+  const effectivePatients = verified.length > 0 ? verified : patientData;
+  const stats = calculateStats(effectivePatients);
+  const table1Data = getAnonymizedTable1Data(effectivePatients);
+  const ijcprManuscript = useMemo(() => generateIJCPRManuscript(effectivePatients), [effectivePatients]);
   const patientsWithHbA1c = filterPatientsWithTyGAndHbA1c(patientData);
 
   const handleEdit = (section: string) => {
@@ -55,12 +55,20 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
   };
 
   const handleExportWord = async () => {
-    const figures = {
-      fig1: generateScatterPlotSVG(patientData),
-      fig2: generateHistogramSVG(patientData),
-      fig3: generateRiskBarChartSVG(patientData),
-    };
-    await exportWord(patientsForExport, ijcprManuscript, 'tyd-ijcpr-manuscript.docx', figures);
+    let figurePngBase64: { fig1: string; fig2: string; fig3: string } | undefined;
+    try {
+      const fig1 = await svgToPngBase64(generateScatterPlotSVG(effectivePatients));
+      const fig2 = await svgToPngBase64(generateHistogramSVG(effectivePatients));
+      const fig3 = await svgToPngBase64(generateRiskBarChartSVG(effectivePatients));
+      if (fig1 && fig2 && fig3) {
+        figurePngBase64 = { fig1, fig2, fig3 };
+      }
+    } catch (e) {
+      console.warn('Chart-to-PNG failed, exporting Word without figures:', e);
+    }
+    await exportWord(effectivePatients, ijcprManuscript, 'tyd-ijcpr-manuscript.docx', {
+      figurePngBase64,
+    });
   };
 
   const handleExportPaper2Word = async () => {
@@ -69,16 +77,20 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
       return;
     }
     const hba1cManuscript = generateHbA1cManuscript(patientsWithHbA1c);
-    const figures = {
-      fig1: generateScatterPlotSVG(patientsWithHbA1c),
-      fig2: generateHistogramSVG(patientsWithHbA1c),
-      fig3: generateRiskBarChartSVG(patientsWithHbA1c),
-    };
+    let figurePngBase64: { fig1: string; fig2: string; fig3: string } | undefined;
+    try {
+      const fig1 = await svgToPngBase64(generateScatterPlotSVG(patientsWithHbA1c));
+      const fig2 = await svgToPngBase64(generateHistogramSVG(patientsWithHbA1c));
+      const fig3 = await svgToPngBase64(generateRiskBarChartSVG(patientsWithHbA1c));
+      if (fig1 && fig2 && fig3) figurePngBase64 = { fig1, fig2, fig3 };
+    } catch (e) {
+      console.warn('Chart-to-PNG failed for Paper 3 Word export:', e);
+    }
     await exportWord(
       patientsWithHbA1c,
       hba1cManuscript as ManuscriptData,
       'tyg-hba1c-manuscript.docx',
-      figures
+      { figurePngBase64 }
     );
   };
 
@@ -89,19 +101,18 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
   };
 
   const handleExportCSV = () => {
-    exportCSV(patientsForExport, 'tyg-study-anonymized.csv');
+    exportCSV(effectivePatients, 'tyg-study-anonymized.csv');
   };
 
-  const handleExportFigures = () => {
-    svgToPng(generateScatterPlotSVG(patientsForExport), 'figure1-tyg-vs-waist.png');
-    setTimeout(() => svgToPng(generateHistogramSVG(patientsForExport), 'figure2-tyg-distribution.png'), 300);
-    setTimeout(() => {
-      svgToPng(generateRiskBarChartSVG(patientsForExport), 'figure3-risk-stratification.png');
-      alert('✅ All 3 figures exported (300 DPI PNG)');
-    }, 600);
+  const handleExportFigures = async () => {
+    const scatterSVG = generateScatterPlotSVG(effectivePatients);
+    await svgToPng(scatterSVG, 'figure1-tyg-vs-waist.png');
+    const histogramSVG = generateHistogramSVG(effectivePatients);
+    await svgToPng(histogramSVG, 'figure2-tyg-distribution.png');
+    const riskChartSVG = generateRiskBarChartSVG(effectivePatients);
+    await svgToPng(riskChartSVG, 'figure3-risk-stratification.png');
+    alert('✅ All 3 figures exported (300 DPI PNG)');
   };
-
-  const ijcprManuscript = generateIJCPRManuscript(patientData);
 
   const SectionEditor = ({
     section,
@@ -297,19 +308,19 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
         <h3 className="font-bold text-xl text-indigo-900 mb-4">Figures Preview</h3>
         <div className="space-y-6">
           <div className="border rounded-lg p-4 bg-white">
-            <div dangerouslySetInnerHTML={{ __html: generateScatterPlotSVG(patientData) }} />
+            <div dangerouslySetInnerHTML={{ __html: generateScatterPlotSVG(effectivePatients) }} />
             <p className="text-sm text-gray-600 mt-2 italic">
               <strong>Figure 1:</strong> {ijcprManuscript.figure1Caption}
             </p>
           </div>
           <div className="border rounded-lg p-4 bg-white">
-            <div dangerouslySetInnerHTML={{ __html: generateHistogramSVG(patientData) }} />
+            <div dangerouslySetInnerHTML={{ __html: generateHistogramSVG(effectivePatients) }} />
             <p className="text-sm text-gray-600 mt-2 italic">
               <strong>Figure 2:</strong> {ijcprManuscript.figure2Caption}
             </p>
           </div>
           <div className="border rounded-lg p-4 bg-white">
-            <div dangerouslySetInnerHTML={{ __html: generateRiskBarChartSVG(patientData) }} />
+            <div dangerouslySetInnerHTML={{ __html: generateRiskBarChartSVG(effectivePatients) }} />
             <p className="text-sm text-gray-600 mt-2 italic">
               <strong>Figure 3:</strong> {ijcprManuscript.figure3Caption}
             </p>

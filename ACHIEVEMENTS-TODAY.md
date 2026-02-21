@@ -55,6 +55,13 @@
 - [x] No console errors
 - [x] Server can be stopped temporarily
 
+**Latest (Word export fix + server check):**
+1. **Export Word – no blank doc** – IJCPR manuscript now always exports with tables and text; charts are converted to PNG via `svgToPngBase64` and embedded with docx `ImageRun`. If figure embedding fails, export falls back to document without images so the file is never empty. `buildIJCPRChildren` uses safe strings and validates PNG base64 before embedding.
+2. **Export filenames and quality** – Export Word downloads `tyd-ijcpr-manuscript.docx` (Tables + 3 embedded figures). Export PDF downloads `tyd-ijcpr-manuscript.pdf` at scale 3 for publication quality. Export All Figures downloads `figure1-tyg-vs-waist.png`, `figure2-tyg-distribution.png`, `figure3-risk-stratification.png` (300 DPI).
+3. **Server check** – Run `npm run dev` (port 3030) to verify Step 5 Export Word, Export PDF, and Export All Figures locally.
+
+**Earlier:** CSV import backup, parseCsvToPatients (Moderate risk), IJCPR manuscript, Word export with docx, nullish coalescing fix in TabExtract, dev port 3030, single source of truth (patientData).
+
 ---
 
 *Paper 1 & 2 unchanged. Paper 3 only.*

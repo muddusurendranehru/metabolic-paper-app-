@@ -11,6 +11,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ### 2. Dependencies Installed (Working)
 | Package | Version | Purpose |
 |---------|---------|---------|
+| pdfjs-dist | ^5.x | PDF text extraction (LLM path); digital PDFs |
 | pdf-parse | ^2.4.5 | PDF text extraction |
 | shadcn-ui | ^0.9.5 | UI components |
 | lucide-react | ^0.564.0 | Icons |
@@ -23,6 +24,9 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 | @tanstack/react-table | ^8.21.3 | Data tables |
 
 **Do not reinstall or overwrite these—setup is stable.**
+
+### LLM extraction (optional)
+- Step 1 has an **"Extract with LLM (fallback)"** button. It uses `OPENAI_API_KEY` to extract lab fields from a PDF via GPT. Copy `.env.example` to `.env` and set `OPENAI_API_KEY` if you want this. If unset, OCR and manual add still work.
 
 ---
 

@@ -1,30 +1,37 @@
 /**
- * Parse age from lab report strings like "74 Y 0 M 0 D", "74Y", "74 years", "Age: 74"
+ * Parse age strings from lab reports and LLM output to a number.
+ * Examples: "74 Y 0 M 0 D" -> 74, "58 years" -> 58, "45" -> 45
  */
+export function parseAgeString(str: string | null | undefined): number | null {
+  if (str == null || typeof str !== "string") return null;
+  const trimmed = str.trim();
+  if (!trimmed) return null;
 
-const PATTERNS = [
-  // "74 Y 0 M 0 D" or "74 Y" (years only)
-  /(\d{1,3})\s*Y(?:\s*\d{1,2}\s*M)?(?:\s*\d{1,2}\s*D)?/i,
-  // "74 years" or "74 yrs"
-  /(\d{1,3})\s*(?:years?|yrs?)\s*(?:old)?/i,
-  // "Age: 74" or "Age 74" or "Age-74"
-  /age\s*[:\s\-]*(\d{1,3})/i,
-  // Standalone 1–3 digit number after "age" context (e.g. "Male 74")
-  /(?:age|gender)\s*[:\s\-]*(\d{1,3})\b/i,
-];
-
-/**
- * Parse age in years from text. Returns null if not found or invalid.
- */
-export function parseAge(text: string): number | null {
-  if (!text || typeof text !== "string") return null;
-  const normalized = text.replace(/\s+/g, " ").trim();
-  for (const pattern of PATTERNS) {
-    const match = normalized.match(pattern);
-    if (match && match[1]) {
-      const years = parseInt(match[1], 10);
-      if (!isNaN(years) && years >= 0 && years <= 120) return years;
-    }
+  // "74 Y 0 M 0 D" or "74Y 0M 0D" -> take first number as years
+  const ymdMatch = trimmed.match(/^(\d{1,3})\s*[Yy]\s*(?:\d+\s*[Mm])?\s*(?:\d+\s*[Dd])?/);
+  if (ymdMatch && ymdMatch[1]) {
+    const n = parseInt(ymdMatch[1], 10);
+    if (!isNaN(n) && n >= 0 && n <= 120) return n;
   }
+
+  // "58 years" / "58 yrs" / "58 year old"
+  const yearsMatch = trimmed.match(/(\d{1,3})\s*(?:y(?:ears?|rs?)?\s*(?:old)?)?/i);
+  if (yearsMatch && yearsMatch[1]) {
+    const n = parseInt(yearsMatch[1], 10);
+    if (!isNaN(n) && n >= 0 && n <= 120) return n;
+  }
+
+  // "Age: 45" or plain "45"
+  const numMatch = trimmed.match(/(\d{1,3})/);
+  if (numMatch && numMatch[1]) {
+    const n = parseInt(numMatch[1], 10);
+    if (!isNaN(n) && n >= 0 && n <= 120) return n;
+  }
+
   return null;
+}
+
+/** Alias for parseAgeString for compatibility with pdf-parser and callers expecting parseAge(text). */
+export function parseAge(text: string): number | null {
+  return parseAgeString(text);
 }

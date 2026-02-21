@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Tesseract from "tesseract.js";
 import { fromBuffer as pdf2picFromBuffer } from "pdf2pic";
+import { extractWithLLM, parseAge } from "@/lib/utils/llm-extract";
 
 export const runtime = "nodejs";
 
@@ -128,13 +129,13 @@ export async function POST(req: NextRequest) {
 
     const text = fullText.replace(/\s+/g, " ").toLowerCase();
 
-    const tg = extractValue(text, PATTERNS.tg);
-    const glucose = extractValue(text, PATTERNS.glucose);
-    const hdl = extractValue(text, PATTERNS.hdl);
-    const hba1c = extractValue(text, PATTERNS.hba1c);
-    const age = extractValue(text, PATTERNS.age);
-    const sex = extractText(text, PATTERNS.sex);
-    const name = extractText(text, PATTERNS.name);
+    let tg = extractValue(text, PATTERNS.tg);
+    let glucose = extractValue(text, PATTERNS.glucose);
+    let hdl = extractValue(text, PATTERNS.hdl);
+    let hba1c = extractValue(text, PATTERNS.hba1c);
+    let age = extractValue(text, PATTERNS.age);
+    let sex = extractText(text, PATTERNS.sex);
+    let name = extractText(text, PATTERNS.name);
 
     const unitMatch = fullText.match(/(mg\/dl|mmol\/l)/i);
     const unit = unitMatch ? unitMatch[1].toLowerCase() : "mg/dl";
@@ -145,6 +146,34 @@ export async function POST(req: NextRequest) {
       if (tgVal) tgVal = tgVal * 88.57;
       if (glucoseVal) glucoseVal = glucoseVal * 18;
       if (hdlVal) hdlVal = hdlVal * 38.67;
+    }
+
+    // OCR failed to get tg/glucose — try LLM fallback
+    if ((!tg || !glucose) && fullText.trim().length >= 50) {
+      try {
+        const llmData = await extractWithLLM(fullText);
+        const lipids = llmData.lipids as Record<string, unknown> | undefined;
+        const llmTg = typeof lipids?.triglycerides === "number" ? (lipids.triglycerides as number) : null;
+        const llmGlucose = typeof llmData.glucose_fbs === "number" ? (llmData.glucose_fbs as number) : null;
+        if (llmTg != null && llmGlucose != null) {
+          tg = llmTg;
+          glucose = llmGlucose;
+          if (typeof llmData.patient_name === "string") name = llmData.patient_name;
+          const ageRaw = llmData.age;
+          const parsedAge = parseAge(ageRaw != null ? String(ageRaw) : "");
+          if (parsedAge != null) age = parsedAge;
+          if (llmData.sex === "M" || llmData.sex === "F") sex = llmData.sex;
+          const llmHdl = typeof lipids?.hdl === "number" ? (lipids.hdl as number) : null;
+          if (llmHdl != null) {
+            hdl = llmHdl;
+            hdlVal = llmHdl;
+          }
+          const llmHba1c = typeof llmData.hba1c === "number" ? (llmData.hba1c as number) : null;
+          if (llmHba1c != null) hba1c = llmHba1c;
+        }
+      } catch (llmError) {
+        console.error("LLM extraction failed:", llmError);
+      }
     }
 
     let tyg: number | null = null;

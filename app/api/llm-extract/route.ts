@@ -1,15 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractTextFromPdf, extractStructuredFromPdf } from "@/lib/utils/pdf-parser";
+import { extractStructuredFromPdf } from "@/lib/utils/pdf-parser";
 import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_USER_PROMPT } from "@/lib/utils/llm-prompts";
+import { parseAgeString } from "@/lib/utils/age-parser";
 
 export const runtime = "nodejs";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MIN_TEXT_LENGTH_FOR_LLM = 50;
 
 function assessRisk(tyg: number): string {
   if (tyg >= 9.5) return "High";
   if (tyg >= 8.5) return "Moderate";
   return "Normal";
+}
+
+function parseJsonResponse(text: string): Record<string, unknown> | null {
+  const trimmed = text.trim();
+  const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return null;
+  try {
+    return JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -21,6 +34,8 @@ function assessRisk(tyg: number): string {
  */
 export async function POST(req: NextRequest) {
   try {
+    const apiKey = process.env.OPENAI_API_KEY;
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
 
@@ -44,8 +59,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (apiKey) {
+    if (apiKey && text.trim().length >= MIN_TEXT_LENGTH_FOR_LLM) {
       try {
         const { default: OpenAI } = await import("openai");
         const openai = new OpenAI({ apiKey });
@@ -59,38 +73,43 @@ export async function POST(req: NextRequest) {
         });
         const content = completion.choices[0]?.message?.content?.trim();
         if (content) {
-          const parsed = JSON.parse(content) as Record<string, unknown>;
-          const tg = typeof parsed.tg === "number" ? parsed.tg : regexData.tg;
-          const glucose =
-            typeof parsed.glucose === "number" ? parsed.glucose : regexData.glucose;
-          const tgVal = tg ?? 0;
-          const glucoseVal = glucose ?? 0;
-          const tyg =
-            tgVal > 0 && glucoseVal > 0
-              ? Math.log((tgVal * glucoseVal) / 2)
-              : regexData.tyg;
+          const parsed = parseJsonResponse(content);
+          if (parsed != null) {
+            const tg = typeof parsed.tg === "number" ? parsed.tg : regexData.tg;
+            const glucose =
+              typeof parsed.glucose === "number" ? parsed.glucose : regexData.glucose;
+            const tgVal = tg ?? 0;
+            const glucoseVal = glucose ?? 0;
+            const tyg =
+              tgVal > 0 && glucoseVal > 0
+                ? Math.log((tgVal * glucoseVal) / 2)
+                : regexData.tyg;
+            const ageRaw = parsed.age;
+            const age =
+              typeof ageRaw === "number" && !isNaN(ageRaw)
+                ? ageRaw
+                : parseAgeString(ageRaw != null ? String(ageRaw) : null) ?? regexData.age;
 
-          return NextResponse.json({
-            name:
-              typeof parsed.name === "string" && parsed.name
-                ? parsed.name.trim()
-                : regexData.name,
-            age:
-              typeof parsed.age === "number" && !isNaN(parsed.age)
-                ? parsed.age
-                : regexData.age,
-            sex:
-              parsed.sex === "M" || parsed.sex === "F" ? parsed.sex : regexData.sex,
-            tg: tg ?? regexData.tg,
-            glucose: glucose ?? regexData.glucose,
-            hdl:
-              typeof parsed.hdl === "number" && !isNaN(parsed.hdl)
-                ? parsed.hdl
-                : regexData.hdl,
-            tyg: tyg ?? regexData.tyg,
-            risk: tyg != null ? assessRisk(tyg) : regexData.risk,
-            ocrSuccess: !!(tg && glucose),
-          });
+            return NextResponse.json({
+              name:
+                typeof parsed.name === "string" && parsed.name
+                  ? parsed.name.trim()
+                  : regexData.name,
+              age,
+              sex:
+                parsed.sex === "M" || parsed.sex === "F" ? parsed.sex : regexData.sex,
+              tg: tg ?? regexData.tg,
+              glucose: glucose ?? regexData.glucose,
+              hdl:
+                typeof parsed.hdl === "number" && !isNaN(parsed.hdl)
+                  ? parsed.hdl
+                  : regexData.hdl,
+              hba1c: null,
+              tyg: tyg ?? regexData.tyg,
+              risk: tyg != null ? assessRisk(tyg) : regexData.risk,
+              ocrSuccess: !!(tg && glucose),
+            });
+          }
         }
       } catch (llmErr) {
         console.warn("LLM extract failed, using regex:", llmErr);
@@ -107,6 +126,7 @@ export async function POST(req: NextRequest) {
       tyg: regexData.tyg,
       risk: regexData.risk,
       ocrSuccess: regexData.ocrSuccess,
+      hba1c: null,
     });
   } catch (error) {
     console.error("LLM-extract Error:", error);

@@ -21,3 +21,10 @@ export const EXTRACTION_JSON_SCHEMA = {
   hdl: "number or null",
   waist: "number or null",
 } as const;
+
+export function getExtractionPrompts(pdfText: string): { system: string; user: string } {
+  return {
+    system: EXTRACTION_SYSTEM_PROMPT,
+    user: EXTRACTION_USER_PROMPT(pdfText.length > 12000 ? pdfText.slice(0, 12000) + "\n[... truncated]" : pdfText),
+  };
+}

@@ -14,8 +14,10 @@ export function anonymizePatients(patients: PatientWithStatus[]): (Patient & { a
 }
 
 export function getAnonymizedTable1Data(patients: PatientWithStatus[]) {
-  const verified = patients.filter(p => p.status === 'verified');
-  const anonymized = anonymizePatients(verified);
+  const useForTable = patients.filter(p => p.status === 'verified').length > 0
+    ? patients.filter(p => p.status === 'verified')
+    : patients;
+  const anonymized = anonymizePatients(useForTable);
 
   return anonymized.map(p => ({
     id: p.anonymousId,
