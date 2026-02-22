@@ -6,8 +6,8 @@
 
 export type RiskLevel = "Normal" | "Moderate" | "High" | "Pending";
 
-/** ADA 2026 diabetes risk (HbA1c-based) or Pending when unknown */
-export type DiabetesRiskLevel = "Normal" | "Prediabetes" | "Diabetes" | "Very High" | "Pending";
+/** Dr. Muddu clinical HbA1c bands (glycemic control monitoring) or Pending when unknown */
+export type DiabetesRiskLevel = "Normal" | "Prediabetes" | "Good" | "Poor" | "Alert" | "Pending";
 
 export interface PatientBase {
   id: string;
@@ -30,7 +30,7 @@ export interface PatientExtensions {
   verifiedBy?: string;
   /** Paper 3: TyG-HbA1c */
   hba1c?: number | null;
-  /** Paper 3: ADA 2026 – from HbA1c only (Normal / Prediabetes / Diabetes / Very High / Pending) */
+  /** Paper 3: Dr. Muddu clinical bands – from HbA1c only. Your bands: Normal | Prediabetes | Good | Poor | Alert | Pending */
   diabetesRisk?: DiabetesRiskLevel | null;
   verified?: boolean;
 

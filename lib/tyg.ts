@@ -16,8 +16,8 @@ export interface PatientRow {
   risk: "Normal" | "Moderate" | "High" | "Pending";
   /** Paper 3: TyG-HbA1c (optional) */
   hba1c?: number | null;
-  /** Paper 3: ADA 2026 diabetes risk from HbA1c (Normal / Prediabetes / Diabetes / Very High / Pending) */
-  diabetesRisk?: "Normal" | "Prediabetes" | "Diabetes" | "Very High" | "Pending" | null;
+  /** Paper 3: Dr. Muddu clinical HbA1c bands (Normal / Prediabetes / Good / Poor / Alert / Pending) */
+  diabetesRisk?: "Normal" | "Prediabetes" | "Good" | "Poor" | "Alert" | "Pending" | null;
 }
 
 /**

@@ -218,10 +218,10 @@ TyG index correlates with waist circumference and metabolic risk.
       </div>
 
       <div className="bg-amber-50 p-4 rounded-lg mb-6">
-        <h3 className="font-bold text-amber-900 mb-2">🩸 ADA 2026 Diabetes Risk (HbA1c)</h3>
-        <p className="text-xs text-amber-800 mb-2">Normal &lt;5.7% · Prediabetes 5.7–6.4% · Diabetes 6.5–7.9% · Very High ≥8.0% · Pending (no HbA1c)</p>
-        <div className="grid grid-cols-5 gap-4 text-sm">
-          {(["Normal", "Prediabetes", "Diabetes", "Very High", "Pending"] as const).map((level) => {
+        <h3 className="font-bold text-amber-900 mb-2">🩸 Dr. Muddu Clinical HbA1c Bands (Glycemic Control)</h3>
+        <p className="text-xs text-amber-800 mb-2">Normal &lt;6.0% · Prediabetes 6.1–6.5% · Good 6.6–7.0% · Poor 7.1–8.0% · Alert &gt;8.1% · Pending (no HbA1c)</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-sm">
+          {(["Normal", "Prediabetes", "Good", "Poor", "Alert", "Pending"] as const).map((level) => {
             const count = patientData.filter((p) => getDiabetesRisk(p.hba1c) === level).length;
             const pct = patientData.length > 0 ? ((count / patientData.length) * 100).toFixed(1) : "0";
             return (
@@ -236,33 +236,38 @@ TyG index correlates with waist circumference and metabolic risk.
         </div>
       </div>
 
-      {/* ADA 2026 Diabetes Risk Stratification – summary cards + by TyG */}
+      {/* Clinical HbA1c bands stratification – summary cards + by TyG */}
       {patientData.length > 0 && (() => {
         const diabetesStats = getDiabetesRiskStats(patientData);
         const diabetesByTyG = getDiabetesRiskByTyG(patientData);
         return (
           <div className="mb-8">
-            <h3 className="font-bold text-xl text-indigo-900 mb-4">📊 ADA 2026 Diabetes Risk Stratification</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <h3 className="font-bold text-xl text-indigo-900 mb-4">📊 Diabetes Risk by TyG Risk Category (Clinical Bands)</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
               <div className="p-4 bg-green-50 rounded-lg text-center border border-green-200">
-                <p className="text-sm text-gray-600">Normal (&lt;5.7%)</p>
+                <p className="text-sm text-gray-600">Normal (&lt;6.0%)</p>
                 <p className="text-2xl font-bold text-green-900">{diabetesStats.normal}</p>
                 <p className="text-xs text-green-700">{diabetesStats.normalPct}%</p>
               </div>
               <div className="p-4 bg-yellow-50 rounded-lg text-center border border-yellow-200">
-                <p className="text-sm text-gray-600">Prediabetes (5.7–6.4%)</p>
+                <p className="text-sm text-gray-600">Prediabetes (6.1–6.5%)</p>
                 <p className="text-2xl font-bold text-yellow-900">{diabetesStats.prediabetes}</p>
                 <p className="text-xs text-yellow-700">{diabetesStats.prediabetesPct}%</p>
               </div>
+              <div className="p-4 bg-blue-50 rounded-lg text-center border border-blue-200">
+                <p className="text-sm text-gray-600">Good (6.6–7.0%)</p>
+                <p className="text-2xl font-bold text-blue-900">{diabetesStats.good}</p>
+                <p className="text-xs text-blue-700">{diabetesStats.goodPct}%</p>
+              </div>
               <div className="p-4 bg-orange-50 rounded-lg text-center border border-orange-200">
-                <p className="text-sm text-gray-600">Diabetes (6.5–7.9%)</p>
-                <p className="text-2xl font-bold text-orange-900">{diabetesStats.diabetes}</p>
-                <p className="text-xs text-orange-700">{diabetesStats.diabetesPct}%</p>
+                <p className="text-sm text-gray-600">Poor (7.1–8.0%)</p>
+                <p className="text-2xl font-bold text-orange-900">{diabetesStats.poor}</p>
+                <p className="text-xs text-orange-700">{diabetesStats.poorPct}%</p>
               </div>
               <div className="p-4 bg-red-900 rounded-lg text-center border border-red-900">
-                <p className="text-sm text-gray-300">Very High (≥8.0%)</p>
-                <p className="text-2xl font-bold text-white">{diabetesStats.veryHigh}</p>
-                <p className="text-xs text-red-200">{diabetesStats.veryHighPct}%</p>
+                <p className="text-sm text-gray-300">Alert (&gt;8.1%)</p>
+                <p className="text-2xl font-bold text-white">{diabetesStats.alert}</p>
+                <p className="text-xs text-red-200">{diabetesStats.alertPct}%</p>
               </div>
             </div>
             <div className="border rounded-lg p-4 bg-white">
@@ -275,8 +280,9 @@ TyG index correlates with waist circumference and metabolic risk.
                       <th className="p-2 border">Total</th>
                       <th className="p-2 border bg-green-50">Normal</th>
                       <th className="p-2 border bg-yellow-50">Prediabetes</th>
-                      <th className="p-2 border bg-orange-50">Diabetes</th>
-                      <th className="p-2 border bg-red-900 text-white">Very High</th>
+                      <th className="p-2 border bg-blue-50">Good</th>
+                      <th className="p-2 border bg-orange-50">Poor</th>
+                      <th className="p-2 border bg-red-900 text-white">Alert</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -289,8 +295,9 @@ TyG index correlates with waist circumference and metabolic risk.
                           <td className="p-2 border">{data.total}</td>
                           <td className="p-2 border bg-green-50/50">{data.normal > 0 ? data.normal : "—"}</td>
                           <td className="p-2 border bg-yellow-50/50">{data.prediabetes > 0 ? data.prediabetes : "—"}</td>
-                          <td className="p-2 border bg-orange-50/50">{data.diabetes > 0 ? data.diabetes : "—"}</td>
-                          <td className="p-2 border bg-red-900/10 text-red-900">{data.veryHigh > 0 ? data.veryHigh : "—"}</td>
+                          <td className="p-2 border bg-blue-50/50">{data.good > 0 ? data.good : "—"}</td>
+                          <td className="p-2 border bg-orange-50/50">{data.poor > 0 ? data.poor : "—"}</td>
+                          <td className="p-2 border bg-red-900/10 text-red-900">{data.alert > 0 ? data.alert : "—"}</td>
                         </tr>
                       );
                     })}
@@ -298,7 +305,7 @@ TyG index correlates with waist circumference and metabolic risk.
                 </table>
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                * Based on ADA 2026 Guidelines: HbA1c thresholds (waist circumference not used for diabetes risk).
+                * Dr. Muddu clinical HbA1c bands (HOMA Clinic): glycemic control monitoring, not ADA diagnostic.
               </p>
             </div>
           </div>

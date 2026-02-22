@@ -19,6 +19,9 @@ import {
   generateScatterPlotSVG,
   generateHistogramSVG,
   generateRiskBarChartSVG,
+  generateWaistVsHbA1cScatterSVG,
+  generateHbA1cHistogramSVG,
+  generateClinicalBandsBarSVG,
   svgToPng,
   svgToPngBase64,
 } from '@/lib/utils/chart-svg';
@@ -80,12 +83,18 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
     }
     const patients = selectedPaper === 'paper2' ? effectivePatients : patientsWithHbA1c;
     const ms = selectedPaper === 'paper2' ? ijcprManuscript : (hba1cManuscript as ManuscriptData);
-    const filename = selectedPaper === 'paper2' ? 'tyg-waist-manuscript.docx' : 'tyg-hba1c-manuscript.docx';
+    const filename = selectedPaper === 'paper2' ? 'tyg-waist-manuscript.docx' : 'tyd-hba1c-manuscript-SUBMISSION-READY.docx';
     let figurePngBase64: { fig1: string; fig2: string; fig3: string } | undefined;
     try {
-      const fig1 = await svgToPngBase64(generateScatterPlotSVG(patients));
-      const fig2 = await svgToPngBase64(generateHistogramSVG(patients));
-      const fig3 = await svgToPngBase64(generateRiskBarChartSVG(patients));
+      const fig1 = selectedPaper === 'paper3'
+        ? await svgToPngBase64(generateWaistVsHbA1cScatterSVG(patients))
+        : await svgToPngBase64(generateScatterPlotSVG(patients));
+      const fig2 = selectedPaper === 'paper3'
+        ? await svgToPngBase64(generateHbA1cHistogramSVG(patients.filter((p) => p.hba1c != null && Number.isFinite(p.hba1c)).map((p) => p.hba1c!)))
+        : await svgToPngBase64(generateHistogramSVG(patients));
+      const fig3 = selectedPaper === 'paper3'
+        ? await svgToPngBase64(generateClinicalBandsBarSVG(patients))
+        : await svgToPngBase64(generateRiskBarChartSVG(patients));
       if (fig1 && fig2 && fig3) figurePngBase64 = { fig1, fig2, fig3 };
     } catch (e) {
       console.warn('Chart-to-PNG failed, exporting Word without figures:', e);
@@ -112,7 +121,7 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
     await exportWord(
       patientsWithHbA1c,
       hba1cManuscript as ManuscriptData,
-      'tyg-hba1c-manuscript.docx',
+      'tyd-hba1c-manuscript-SUBMISSION-READY.docx',
       { figurePngBase64 }
     );
   };
@@ -128,13 +137,24 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
   };
 
   const handleExportFigures = async () => {
-    const scatterSVG = generateScatterPlotSVG(effectivePatients);
-    await svgToPng(scatterSVG, 'figure1-tyg-vs-waist.png');
-    const histogramSVG = generateHistogramSVG(effectivePatients);
-    await svgToPng(histogramSVG, 'figure2-tyg-distribution.png');
-    const riskChartSVG = generateRiskBarChartSVG(effectivePatients);
-    await svgToPng(riskChartSVG, 'figure3-risk-stratification.png');
-    alert('✅ All 3 figures exported (300 DPI PNG)');
+    if (selectedPaper === 'paper3') {
+      if (patientsWithHbA1c.length === 0) {
+        alert('No patients with both TyG and HbA1c. Add HbA1c values to export Paper 3 figures.');
+        return;
+      }
+      await svgToPng(generateWaistVsHbA1cScatterSVG(patientsWithHbA1c), 'figure1-waist-vs-hba1c.png');
+      await svgToPng(generateHbA1cHistogramSVG(patientsWithHbA1c.filter((p) => p.hba1c != null && Number.isFinite(p.hba1c)).map((p) => p.hba1c!)), 'figure2-hba1c-distribution.png');
+      await svgToPng(generateClinicalBandsBarSVG(patientsWithHbA1c), 'figure3-clinical-bands.png');
+      alert('✅ Paper 3: All 3 figures exported (300 DPI PNG)');
+    } else {
+      const scatterSVG = generateScatterPlotSVG(effectivePatients);
+      await svgToPng(scatterSVG, 'figure1-tyg-vs-waist.png');
+      const histogramSVG = generateHistogramSVG(effectivePatients);
+      await svgToPng(histogramSVG, 'figure2-tyg-distribution.png');
+      const riskChartSVG = generateRiskBarChartSVG(effectivePatients);
+      await svgToPng(riskChartSVG, 'figure3-risk-stratification.png');
+      alert('✅ Paper 2: All 3 figures exported (300 DPI PNG)');
+    }
   };
 
   const SectionEditor = ({
@@ -327,6 +347,20 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
           <p className="text-2xl font-bold text-indigo-900">
             {selectedPaper === 'paper2' ? stats.correlationR.toFixed(2) : (hba1cStats.n > 0 ? hba1cStats.tygHbA1cR.toFixed(2) : '—')}
           </p>
+          {selectedPaper === 'paper3' && hba1cStats.n > 0 && (() => {
+            const p = hba1cStats.tygHbA1cP;
+            const pearsonStr = p < 0.001 ? `Pearson r = ${hba1cStats.tygHbA1cR.toFixed(2)}, p < 0.001` : `Pearson r = ${hba1cStats.tygHbA1cR.toFixed(2)}, p = ${p.toFixed(3)}`;
+            const absR = Math.abs(hba1cStats.tygHbA1cR);
+            const strength = absR >= 0.5 ? 'Strong' : absR >= 0.3 ? 'Moderate' : absR >= 0.1 ? 'Weak' : 'Negligible';
+            const dir = hba1cStats.tygHbA1cR > 0 ? 'positive' : 'negative';
+            const interp = p < 0.001 ? `${strength} ${dir} correlation, highly significant` : `${strength} ${dir} correlation${p < 0.05 ? ', significant' : ''}`;
+            return (
+              <>
+                <p className="text-xs mt-1 text-indigo-700">{pearsonStr}</p>
+                <p className="text-xs mt-0.5 text-green-700 font-medium">✅ {interp}</p>
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -360,7 +394,7 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
         >
           <p className="text-2xl mb-2">✏️</p>
           <p className="font-bold text-sky-900">Paper 3: Word</p>
-          <p className="text-sm text-sky-700">TyG-HbA1c .docx (n={patientsWithHbA1c.length})</p>
+          <p className="text-sm text-sky-700">tyd-hba1c-manuscript-SUBMISSION-READY.docx (n={patientsWithHbA1c.length})</p>
         </button>
         <button
           type="button"
@@ -382,6 +416,21 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
         </button>
       </div>
 
+      <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg" data-pdf-hide>
+        <h4 className="font-semibold text-purple-900 mb-2">📊 View Paper-Specific Figures</h4>
+        <p className="text-sm text-purple-700 mb-3">
+          Open dedicated page with charts matching your selected paper.
+        </p>
+        <a
+          href={`/paper/${selectedPaper === 'paper2' ? 'paper2' : 'paper3'}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
+        >
+          Open {selectedPaper === 'paper2' ? 'TyG-Waist' : 'TyG-HbA1c'} Figures →
+        </a>
+      </div>
+
       {/* PDF export captures this whole block (figures + manuscript); Edit buttons hidden via data-pdf-hide */}
       <div ref={manuscriptRef} className="space-y-8">
       {/* Figures Preview – use selected paper manuscript and cohort */}
@@ -393,7 +442,9 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
           <div className="border rounded-lg p-4 bg-white">
             <div
               dangerouslySetInnerHTML={{
-                __html: generateScatterPlotSVG(selectedPaper === 'paper2' ? effectivePatients : patientsWithHbA1c),
+                __html: selectedPaper === 'paper3'
+                  ? generateWaistVsHbA1cScatterSVG(patientsWithHbA1c)
+                  : generateScatterPlotSVG(effectivePatients),
               }}
             />
             <p className="text-sm text-gray-600 mt-2 italic">
@@ -403,7 +454,9 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
           <div className="border rounded-lg p-4 bg-white">
             <div
               dangerouslySetInnerHTML={{
-                __html: generateHistogramSVG(selectedPaper === 'paper2' ? effectivePatients : patientsWithHbA1c),
+                __html: selectedPaper === 'paper3'
+                  ? generateHbA1cHistogramSVG(patientsWithHbA1c.filter((p) => p.hba1c != null && Number.isFinite(p.hba1c)).map((p) => p.hba1c!))
+                  : generateHistogramSVG(effectivePatients),
               }}
             />
             <p className="text-sm text-gray-600 mt-2 italic">
@@ -413,7 +466,9 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
           <div className="border rounded-lg p-4 bg-white">
             <div
               dangerouslySetInnerHTML={{
-                __html: generateRiskBarChartSVG(selectedPaper === 'paper2' ? effectivePatients : patientsWithHbA1c),
+                __html: selectedPaper === 'paper3'
+                  ? generateClinicalBandsBarSVG(patientsWithHbA1c)
+                  : generateRiskBarChartSVG(effectivePatients),
               }}
             />
             <p className="text-sm text-gray-600 mt-2 italic">

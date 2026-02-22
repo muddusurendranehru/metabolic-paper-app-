@@ -92,8 +92,12 @@ export function parseCsvToPatients(csv: string): Partial<PatientRow>[] {
         row.hba1c = Number.isFinite(n) ? n : undefined;
       }
       else if (h === "diabetesrisk") {
-        const v = val as PatientRow["diabetesRisk"];
-        if (["Normal", "Prediabetes", "Diabetes", "Very High", "Pending"].includes(val)) row.diabetesRisk = v;
+        const canonical: Record<string, PatientRow["diabetesRisk"]> = {
+          "Normal": "Normal", "Prediabetes": "Prediabetes", "Good": "Good", "Poor": "Poor", "Alert": "Alert", "Pending": "Pending",
+          "Non-Diabetic": "Normal", "Prediabetic": "Prediabetes", "Good Control": "Good", "Poor Control": "Poor",
+        };
+        const v = canonical[val];
+        if (v !== undefined) row.diabetesRisk = v;
       }
     });
     rows.push(row);

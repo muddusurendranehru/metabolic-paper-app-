@@ -557,7 +557,7 @@ export function TabExtract({
                         <EditableCell rowIdx={i} field="hba1c" value={p.hba1c ?? ""} type="number" />
                       </td>
                       <td className="p-1.5 border w-20 bg-amber-50/50">
-                        <span className={`px-1.5 py-0.5 rounded text-xs border ${getDiabetesRiskColor(p.diabetesRisk ?? getDiabetesRisk(p.hba1c))}`} title="From HbA1c (ADA 2026)">
+                        <span className={`px-1.5 py-0.5 rounded text-xs border ${getDiabetesRiskColor(p.diabetesRisk ?? getDiabetesRisk(p.hba1c))}`} title="Dr. Muddu clinical bands: Normal &lt;6.0 · Prediabetes 6.1–6.5 · Good 6.6–7.0 · Poor 7.1–8.0 · Alert &gt;8.1">
                           {p.diabetesRisk ?? getDiabetesRisk(p.hba1c)}
                         </span>
                       </td>

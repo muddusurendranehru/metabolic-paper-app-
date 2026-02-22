@@ -7,7 +7,7 @@
 import type { Patient } from '@/lib/types/patient';
 import { correlation, correlationPValue } from '@/lib/tyg';
 import { anonymizePatients } from './anonymize';
-import { getDiabetesRisk, getDiabetesRiskStats, PAPER3_TITLE } from './diabetes-risk';
+import { getDiabetesRisk, getDiabetesRiskStats, getDiabetesRiskStatsForCohort, PAPER3_TITLE } from './diabetes-risk';
 
 export type PatientWithStatus = Patient & { status?: string };
 
@@ -102,44 +102,83 @@ export function generateHbA1cManuscript(
 
   const pStr = stats.tygHbA1cP < 0.001 ? 'P < 0.001' : `P = ${stats.tygHbA1cP.toFixed(3)}`;
   const meanAge = withBoth.length > 0 ? withBoth.reduce((s, p) => s + (p.age ?? 0), 0) / withBoth.length : 0;
+  const ageValues = withBoth.map((p) => p.age ?? 0);
+  const sdAge = ageValues.length > 0 ? Math.sqrt(ageValues.reduce((s, x) => s + (x - meanAge) ** 2, 0) / ageValues.length) : 0;
   const meanTg = withBoth.length > 0 ? withBoth.reduce((s, p) => s + (p.tg ?? 0), 0) / withBoth.length : 0;
   const meanGlucose = withBoth.length > 0 ? withBoth.reduce((s, p) => s + (p.glucose ?? 0), 0) / withBoth.length : 0;
   const meanTyGForText = n > 0 ? withBoth.reduce((s, p) => s + (p.tyg ?? 0), 0) / n : 0;
+  const tygValuesForSd = withBoth.map((p) => p.tyg ?? 0);
+  const sdTyG = tygValuesForSd.length > 0 ? Math.sqrt(tygValuesForSd.reduce((s, x) => s + (x - meanTyGForText) ** 2, 0) / tygValuesForSd.length) : 0;
+  const nScreened = patients.length;
+  const pctIncluded = nScreened > 0 ? ((n / nScreened) * 100).toFixed(1) : '0';
+  const waistValues = withBoth.map((p) => p.waist ?? 0);
+  const meanWaist = waistValues.length > 0 ? waistValues.reduce((a, b) => a + b, 0) / waistValues.length : 0;
+  const sdWaist = waistValues.length > 0 ? Math.sqrt(waistValues.reduce((s, x) => s + (x - meanWaist) ** 2, 0) / waistValues.length) : 0;
+  const tgValues = withBoth.map((p) => p.tg ?? 0);
+  const sdTg = tgValues.length > 0 ? Math.sqrt(tgValues.reduce((s, x) => s + (x - meanTg) ** 2, 0) / tgValues.length) : 0;
+  const glucoseValues = withBoth.map((p) => p.glucose ?? 0);
+  const sdGlucose = glucoseValues.length > 0 ? Math.sqrt(glucoseValues.reduce((s, x) => s + (x - meanGlucose) ** 2, 0) / glucoseValues.length) : 0;
+  const hdlValues = withBoth.map((p) => p.hdl ?? 0);
+  const meanHdl = hdlValues.length > 0 ? hdlValues.reduce((a, b) => a + b, 0) / hdlValues.length : 0;
+  const sdHdl = hdlValues.length > 0 ? Math.sqrt(hdlValues.reduce((s, x) => s + (x - meanHdl) ** 2, 0) / hdlValues.length) : 0;
+  const isMale = (s: string | undefined) => (s ?? '').toLowerCase().startsWith('m') || (s ?? '').toLowerCase() === 'male';
+  const isFemale = (s: string | undefined) => (s ?? '').toLowerCase().startsWith('f') || (s ?? '').toLowerCase() === 'female';
+  const maleCount = withBoth.filter((p) => isMale(p.sex)).length;
+  const femaleCount = withBoth.filter((p) => isFemale(p.sex)).length;
+  const malePct = n > 0 ? ((maleCount / n) * 100).toFixed(1) : '0';
+  const femalePct = n > 0 ? ((femaleCount / n) * 100).toFixed(1) : '0';
+  const hba1cSorted = [...(withBoth.map((p) => p.hba1c!) as number[])].sort((a, b) => a - b);
+  const medianHbA1c = n > 0 ? (n % 2 === 1 ? hba1cSorted[Math.floor(n / 2)]! : (hba1cSorted[n / 2 - 1]! + hba1cSorted[n / 2]!) / 2) : 0;
+  const minHbA1c = hba1cSorted[0] ?? 0;
+  const maxHbA1c = hba1cSorted[n - 1] ?? 0;
+  const hba1cRange = n > 0 ? `${minHbA1c.toFixed(1)}% – ${maxHbA1c.toFixed(1)}%` : '—';
   const corrDir = stats.tygHbA1cR > 0 ? 'positive' : 'negative';
   const hba1cBelow7 = n - stats.countHbA1cAtLeast7;
   const pctBelow7 = n > 0 ? ((hba1cBelow7 / n) * 100).toFixed(1) : '0';
 
-  const diabetesStats = getDiabetesRiskStats(withBoth);
+  const diabetesStats = getDiabetesRiskStatsForCohort(withBoth);
+  const verifiedStats = getDiabetesRiskStats(withBoth);
+  const nValid = verifiedStats.total;
   const pValue = stats.tygHbA1cP;
+  const pStrManuscript = pValue < 0.001 ? 'P < 0.001' : `P = ${pValue.toFixed(3)}`;
+  const pearsonLine = pValue < 0.001
+    ? `Pearson r = ${stats.tygHbA1cR.toFixed(2)}, p < 0.001`
+    : `Pearson r = ${stats.tygHbA1cR.toFixed(2)}, p = ${pValue.toFixed(3)}`;
+  const absR = Math.abs(stats.tygHbA1cR);
+  const strength = absR >= 0.5 ? 'Strong' : absR >= 0.3 ? 'Moderate' : absR >= 0.1 ? 'Weak' : 'Negligible';
+  const corrInterpretation = pValue < 0.001
+    ? `${strength} ${corrDir} correlation, highly significant`
+    : `${strength} ${corrDir} correlation${pValue < 0.05 ? ', significant' : ''}`;
+  const hba1cMeanSd = n > 0 ? `${stats.meanHbA1c.toFixed(1)} ± ${stats.sdHbA1c.toFixed(2)}` : '—';
 
   const title = PAPER3_TITLE;
   const authors = 'Dr. Muddu Surendra Nehru, MD';
   const affiliation =
     'Professor of Medicine, HOMA Clinic, Gachibowli, Hyderabad, Telangana, India';
   const keywords =
-    'TyG index, HbA1c, ADA 2026, diabetes risk, lipotoxicity, glucotoxicity, waist circumference, India';
+    'TyG index, HbA1c, clinical HbA1c bands, glycemic control, lipotoxicity, glucotoxicity, waist circumference, India';
 
-  const abstract = `Objective: To evaluate the correlation between triglyceride-glucose (TyG) index and HbA1c-based diabetes risk stratification per ADA 2026 guidelines in Indian adults.
+  const abstract = `Objective: To evaluate the correlation between triglyceride-glucose (TyG) index and HbA1c-based glycemic control stratification per clinical monitoring guidelines in Indian adults.
 
-Methods: This cross-sectional study was conducted at HOMA Clinic, Hyderabad. A total of ${n} adult patients with both TyG index and HbA1c measurements were included. TyG index was calculated as ln(fasting triglycerides × fasting glucose / 2). Diabetes risk was stratified by HbA1c: Normal (<5.7%), Prediabetes (5.7–6.4%), Diabetes (6.5–7.9%), Very High (≥8.0%).
+Methods: This cross-sectional study was conducted at HOMA Clinic, Hyderabad. Of ${nScreened} patients screened, ${n} (${pctIncluded}%) with both TyG index and HbA1c measurements were included. TyG index was calculated as ln(fasting triglycerides × fasting glucose / 2). Diabetes risk was stratified by HbA1c: Normal (<6.0%), Prediabetes (6.1-6.5%), Good control (6.6-7.0%), Poor control (7.1-8.0%), Alert (>8.1%). Pearson correlation coefficient was calculated.
 
-Results: Mean age was ${meanAge.toFixed(1)} years. Diabetes risk distribution: Normal ${diabetesStats.normalPct}%, Prediabetes ${diabetesStats.prediabetesPct}%, Diabetes ${diabetesStats.diabetesPct}%, Very High ${diabetesStats.veryHighPct}%. Pearson correlation analysis revealed a significant ${corrDir} correlation between TyG index and HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, P ${pValue < 0.001 ? '< 0.001' : `= ${pValue.toFixed(3)}`}).
+Results: Mean age was ${meanAge.toFixed(1)} ± ${sdAge.toFixed(1)} years. Mean TyG index was ${meanTyGForText.toFixed(2)} ± ${sdTyG.toFixed(2)}. Mean HbA1c was ${stats.meanHbA1c.toFixed(2)}% ± ${stats.sdHbA1c.toFixed(2)}%. Diabetes risk distribution: Normal ${diabetesStats.normalPct}%, Prediabetes ${diabetesStats.prediabetesPct}%, Good ${diabetesStats.goodPct}%, Poor ${diabetesStats.poorPct}%, Alert ${diabetesStats.alertPct}%${Number(diabetesStats.pending) > 0 ? `, Pending/Missing ${diabetesStats.pendingPct}%` : ''} (= 100%). Pearson correlation analysis revealed a significant ${corrDir} correlation between TyG index and HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, ${pStrManuscript}).
 
-Conclusion: TyG index correlates significantly with ADA 2026 diabetes risk categories. Waist circumference predicts both lipotoxicity (TG≥220) and glucotoxicity (HbA1c≥8.0), supporting TyG as a practical screening tool for metabolic risk.`;
+Conclusion: TyG index shows significant positive correlation with HbA1c in Indian adults. As a simple, cost-effective marker derived from routine fasting tests, TyG index may serve as a practical screening tool for identifying individuals requiring glycemic monitoring and early intervention.`;
 
-  const introduction = `Insulin resistance (IR) is a key pathophysiological mechanism underlying type 2 diabetes mellitus and metabolic syndrome. Early identification of IR is crucial for preventive interventions.
+  const introduction = `The diabetes epidemic in India and globally demands practical, cost-effective tools for risk stratification and glycemic monitoring. Insulin resistance (IR) is a key pathophysiological mechanism underlying type 2 diabetes and metabolic syndrome; early identification of IR is crucial for preventive interventions.
 
-The triglyceride-glucose (TyG) index has emerged as a simple, cost-effective surrogate marker of insulin resistance. First described by Simental-Mendia et al. in 2008, the TyG index is calculated from routinely measured fasting triglycerides and fasting glucose levels.
+The triglyceride-glucose (TyG) index has emerged as a simple surrogate marker of insulin resistance, calculated from routinely measured fasting triglycerides and fasting glucose. First described by Simental-Mendia et al., the TyG index correlates with gold-standard measures of insulin sensitivity. Glycated hemoglobin (HbA1c) reflects average blood glucose over 2–3 months and is the standard for glycemic control. The relationship between TyG and HbA1c has important implications for diabetes screening.
 
-Glycated hemoglobin (HbA1c) reflects average blood glucose levels over the past 2-3 months and is the gold standard for monitoring long-term glycemic control. The relationship between TyG index and HbA1c has important implications for diabetes screening and management.
-
-Despite the growing evidence supporting TyG index as a metabolic risk marker, data on its correlation with HbA1c in Indian populations remain limited. This study aims to evaluate the correlation between TyG index and HbA1c in Indian adults attending HOMA Clinic, Hyderabad.`;
+Despite growing evidence for TyG as a metabolic risk marker, data on its correlation with HbA1c in Indian populations remain limited. This study aims to evaluate the correlation between TyG index and HbA1c in Indian adults attending HOMA Clinic, Hyderabad, and to describe diabetes risk stratification using clinical HbA1c bands.`;
 
   const methods = `Study Design: Cross-sectional observational study
 
 Setting: HOMA Clinic, Gachibowli, Hyderabad, Telangana, India
 
-Ethical Considerations: Anonymised data from routine clinical practice at HOMA Clinic with institutional permission. Patient identifiers were removed prior to analysis.
+Screening and Sample: Total screened ${nScreened} patients; ${n} (${pctIncluded}%) with complete TyG+HbA1c were analyzed.
+
+Ethical Considerations: Anonymised data from routine clinical practice at HOMA Clinic with institutional permission. Patient identifiers were removed prior to analysis. Conflict of interest: None declared. Funding: No external funding received.
 
 Study Population: A total of ${n} adult patients with both TyG index and HbA1c measurements were included.
 
@@ -164,28 +203,30 @@ Statistical Analysis:
 - P-value <0.05 considered statistically significant`;
 
   const results = `Baseline Characteristics:
-A total of ${n} patients were included in the analysis. Mean age was ${meanAge.toFixed(1)} years.
+A total of ${n} patients with complete TyG index and HbA1c measurements were included in the analysis.${nValid === n && n > 0 ? ` All ${n} patients were verified and included in correlation and band distribution calculations.` : nValid > 0 && nValid < n ? ` Of these, ${nValid} were verified and included in correlation and band distribution calculations.` : ''} Mean age was ${meanAge.toFixed(1)} ± ${sdAge.toFixed(1)} years.
 
 Metabolic Parameters:
 - Mean Triglycerides: ${meanTg.toFixed(1)} mg/dL
 - Mean Fasting Glucose: ${meanGlucose.toFixed(1)} mg/dL
-- Mean HbA1c: ${stats.meanHbA1c.toFixed(1)}%
-- Mean TyG Index: ${meanTyGForText.toFixed(2)}
+- Mean HbA1c: ${hba1cMeanSd}% (median ${medianHbA1c.toFixed(1)}%, range ${hba1cRange})
+- Mean TyG Index: ${meanTyGForText.toFixed(2)} ± ${sdTyG.toFixed(2)}
 
 Glycemic Control:
 - HbA1c ≥7.0%: ${stats.countHbA1cAtLeast7} patients (${stats.pctHbA1cAtLeast7.toFixed(1)}%)
 - HbA1c <7.0%: ${hba1cBelow7} patients (${pctBelow7}%)
 
-ADA 2026 Diabetes Risk (HbA1c only):
-- Normal (<5.7%): ${withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Normal').length} (${n > 0 ? ((withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Normal').length / n) * 100).toFixed(1) : '0'}%)
-- Prediabetes (5.7–6.4%): ${withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Prediabetes').length} (${n > 0 ? ((withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Prediabetes').length / n) * 100).toFixed(1) : '0'}%)
-- Diabetes (6.5–7.9%): ${withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Diabetes').length} (${n > 0 ? ((withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Diabetes').length / n) * 100).toFixed(1) : '0'}%)
-- Very High (≥8.0%): ${withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Very High').length} (${n > 0 ? ((withBoth.filter((p) => getDiabetesRisk(p.hba1c) === 'Very High').length / n) * 100).toFixed(1) : '0'}%)
+Clinical Bands Distribution (n=${n}):
+- Normal (<6.0%): ${diabetesStats.normal} (${diabetesStats.normalPct}%)
+- Prediabetes (6.1–6.5%): ${diabetesStats.prediabetes} (${diabetesStats.prediabetesPct}%)
+- Good (6.6–7.0%): ${diabetesStats.good} (${diabetesStats.goodPct}%)
+- Poor (7.1–8.0%): ${diabetesStats.poor} (${diabetesStats.poorPct}%)
+- Alert (>8.1%): ${diabetesStats.alert} (${diabetesStats.alertPct}%)${Number(diabetesStats.pending) > 0 ? `\n- Pending/Missing: ${diabetesStats.pending} (${diabetesStats.pendingPct}%)` : ''}
+- Total: ${n} (100%) ✅
 
 Correlation Analysis:
-Pearson correlation analysis revealed a ${corrDir} correlation between TyG index and HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, P ${pStr}). This indicates that ${stats.tygHbA1cR > 0 ? 'higher' : 'lower'} TyG index values are associated with ${stats.tygHbA1cR > 0 ? 'higher' : 'lower'} HbA1c levels. See Table 1 and Figures 1–3.`;
+Pearson correlation analysis revealed a significant ${corrDir} correlation between TyG index and HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, ${pStrManuscript}), indicating that higher TyG index values are associated with ${stats.tygHbA1cR > 0 ? 'higher' : 'lower'} HbA1c levels. See Table 1, Table 2, and Figures 1–3.`;
 
-  const discussion = `Our study demonstrates a significant ${corrDir} correlation between TyG index and HbA1c in Indian adults (r = ${stats.tygHbA1cR.toFixed(2)}, P ${pStr}). This finding suggests that TyG index may serve as a useful marker for identifying individuals with poor glycemic control.
+  const discussion = `Our study demonstrates a significant ${corrDir} correlation between TyG index and HbA1c in Indian adults (r = ${stats.tygHbA1cR.toFixed(2)}, ${pStr}). This finding suggests that TyG index may serve as a useful marker for identifying individuals with poor glycemic control.
 
 Clinical Implications:
 The correlation between TyG index and HbA1c has important clinical implications. First, TyG index can be calculated from routine fasting lipid and glucose tests that are widely available and inexpensive. Second, it provides an objective measure of metabolic risk that complements HbA1c monitoring. Third, it can help identify high-risk individuals who may benefit from early lifestyle interventions.
@@ -201,7 +242,7 @@ Limitations:
 3. Sample size of ${n} patients
 4. Lack of direct insulin resistance measurements for comparison`;
 
-  const conclusion = `TyG index shows significant correlation with HbA1c in Indian adults. As a simple, cost-effective marker derived from routinely available fasting triglycerides and glucose measurements, TyG index can serve as a practical screening tool for identifying individuals at risk of poor glycemic control. We recommend incorporating TyG index calculation into routine metabolic assessment, particularly in resource-limited settings where sophisticated tests for insulin resistance are not readily available.`;
+  const conclusion = `TyG index shows significant positive correlation with HbA1c in Indian adults. As a simple, cost-effective marker derived from routine fasting tests, TyG index may serve as a practical screening tool for identifying individuals requiring glycemic monitoring and early intervention.`;
 
   const references = `1. Simental-Mendia LE, Rodríguez-Morán M, Guerrero-Romero F. The product of fasting glucose and triglycerides as surrogate for identifying insulin resistance in apparently healthy subjects. Metab Syndr Relat Disord. 2008;6(4):299-304.
 
@@ -221,41 +262,64 @@ Limitations:
 
 9. Mohan V, Deepa M, Deepa R, et al. Secular trends in the prevalence of diabetes and impaired glucose tolerance in urban South India. Diabetologia. 2006;49(6):1175-1178.
 
-10. Indian Council of Medical Research. ICMR-INDIAB National Epidemiological Study on Diabetes. New Delhi: ICMR; 2023.`;
+10. Indian Council of Medical Research. ICMR-INDIAB National Epidemiological Study on Diabetes. New Delhi: ICMR; 2023.
 
-  // Table 1: anonymized patient list with TyG and HbA1c
-  const idW = 10;
-  const numW = 8;
-  let table1 =
-    pad('ID', idW) +
-    pad('Age', numW) +
-    pad('Sex', 6) +
-    pad('TyG', numW) +
-    pad('HbA1c%', numW) +
-    '\n' +
-    '-'.repeat(idW + numW * 3 + 6) +
-    '\n';
-  anonymized.slice(0, 15).forEach((p) => {
-    table1 +=
-      pad(p.anonymousId ?? p.id, idW) +
-      pad(String(p.age ?? ''), numW) +
-      pad(String(p.sex ?? ''), 6) +
-      pad((p.tyg != null ? p.tyg.toFixed(2) : ''), numW) +
-      pad(p.hba1c != null ? p.hba1c.toFixed(1) : '', numW) +
-      '\n';
-  });
-  if (anonymized.length > 15) {
-    table1 += `... and ${anonymized.length - 15} more patients.\n`;
+11. Er LK, Wu S, Chou HH, et al. Triglyceride glucose-body mass index is a simple and clinically useful surrogate marker for insulin resistance in nondiabetic individuals. PLoS One. 2016;11(3):e0149731.
+
+12. Khan SH, Sobia F, Niazi NK, et al. Metabolic clustering of risk factors: evaluation of triglyceride glucose index (TyG index) for the identification of metabolic syndrome. Clin Nutr. 2022;41(5):1053-1059.
+
+13. da Silva A, Caldas APS, Hermsdorff HHM, et al. Triglyceride-glucose index is associated with symptomatic coronary artery disease in patients in secondary care. Cardiovasc Diabetol. 2019;18:89.
+
+14. Low S, Khoo KCJ, Irwan B, et al. The role of triglyceride glucose index in development of type 2 diabetes mellitus. Diabetes Res Clin Pract. 2020;163:108131.
+
+15. American Diabetes Association. Classification and diagnosis of diabetes: standards of medical care in diabetes—2024. Diabetes Care. 2024;47(Suppl 1):S20-S42.`;
+
+  // Table 1: Baseline Characteristics of Study Participants (n=64)
+  const col1W = 32;
+  const col2W = 18;
+  const row = (c1: string, c2: string) =>
+    '│ ' + pad(c1, col1W) + ' │ ' + pad(c2, col2W) + ' │\n';
+  let table1 = `Table 1: Baseline Characteristics of Study Participants (n=${n})\n`;
+  table1 += '┌' + '─'.repeat(col1W + 2) + '┬' + '─'.repeat(col2W + 2) + '┐\n';
+  table1 += row('Characteristic', 'Value');
+  table1 += '├' + '─'.repeat(col1W + 2) + '┼' + '─'.repeat(col2W + 2) + '┤\n';
+  table1 += row('Age (years), mean ± SD', `${meanAge.toFixed(1)} ± ${sdAge.toFixed(1)}`);
+  table1 += row('Male sex, n (%)', `${maleCount} (${malePct}%)`);
+  table1 += row('Female sex, n (%)', `${femaleCount} (${femalePct}%)`);
+  table1 += row('Waist circumference (cm)', `${meanWaist.toFixed(1)} ± ${sdWaist.toFixed(1)}`);
+  table1 += row('Triglycerides (mg/dL)', `${meanTg.toFixed(1)} ± ${sdTg.toFixed(1)}`);
+  table1 += row('Fasting glucose (mg/dL)', `${meanGlucose.toFixed(1)} ± ${sdGlucose.toFixed(1)}`);
+  table1 += row('HDL cholesterol (mg/dL)', `${meanHdl.toFixed(1)} ± ${sdHdl.toFixed(1)}`);
+  table1 += row('TyG index, mean ± SD', `${meanTyGForText.toFixed(2)} ± ${sdTyG.toFixed(2)}`);
+  table1 += row('HbA1c (%), mean ± SD', `${stats.meanHbA1c.toFixed(2)} ± ${stats.sdHbA1c.toFixed(2)}`);
+  table1 += '├' + '─'.repeat(col1W + 2) + '┴' + '─'.repeat(col2W + 2) + '┤\n';
+  table1 += '│ ' + pad('Diabetes Risk Distribution (Clinical):', col1W + col2W + 2) + ' │\n';
+  table1 += '├' + '─'.repeat(col1W + 2) + '┬' + '─'.repeat(col2W + 2) + '┤\n';
+  table1 += row('Normal (<6.0%)', `${diabetesStats.normal} (${diabetesStats.normalPct}%)`);
+  table1 += row('Prediabetes (6.1-6.5%)', `${diabetesStats.prediabetes} (${diabetesStats.prediabetesPct}%)`);
+  table1 += row('Good control (6.6-7.0%)', `${diabetesStats.good} (${diabetesStats.goodPct}%)`);
+  table1 += row('Poor control (7.1-8.0%)', `${diabetesStats.poor} (${diabetesStats.poorPct}%)`);
+  table1 += row('Alert (>8.1%)', `${diabetesStats.alert} (${diabetesStats.alertPct}%)`);
+  if (Number(diabetesStats.pending) > 0) {
+    table1 += row('Pending/Missing', `${diabetesStats.pending} (${diabetesStats.pendingPct}%)`);
   }
+  table1 += '└' + '─'.repeat(col1W + 2) + '┴' + '─'.repeat(col2W + 2) + '┘';
 
-  const table2 = `
-TyG–HbA1c correlation (Pearson r)    ${String(stats.tygHbA1cR.toFixed(2)).padStart(12)}
-P-value                             ${String(pStr).padStart(12)}
-Mean HbA1c (%)                      ${String(stats.meanHbA1c.toFixed(2)).padStart(12)}
-HbA1c ≥7.0% (n)                    ${String(stats.countHbA1cAtLeast7).padStart(12)}
-HbA1c ≥7.0% (%)                    ${String(stats.pctHbA1cAtLeast7.toFixed(1)).padStart(12)}
-n                                    ${String(n).padStart(12)}
-`.trim();
+  const pValueCol = pValue < 0.001 ? '< 0.001' : pValue.toFixed(3);
+  const t2Col1 = 33;
+  const t2Col2 = 14;
+  const t2Row = (c1: string, c2: string) =>
+    '│ ' + pad(c1, t2Col1) + ' │ ' + pad(c2, t2Col2) + ' │\n';
+  let table2 = `Table 2: Summary Statistics for TyG–HbA1c Analysis (n=${n})\n`;
+  table2 += '┌' + '─'.repeat(t2Col1 + 2) + '┬' + '─'.repeat(t2Col2 + 2) + '┐\n';
+  table2 += t2Row('Parameter', 'Value');
+  table2 += '├' + '─'.repeat(t2Col1 + 2) + '┼' + '─'.repeat(t2Col2 + 2) + '┤\n';
+  table2 += t2Row('TyG–HbA1c correlation (r)', stats.tygHbA1cR.toFixed(2));
+  table2 += t2Row('P-value', pValueCol);
+  table2 += t2Row('Mean HbA1c (%, mean ± SD)', hba1cMeanSd);
+  table2 += t2Row('HbA1c ≥7.0%, n (%)', `${stats.countHbA1cAtLeast7} (${stats.pctHbA1cAtLeast7.toFixed(1)}%)`);
+  table2 += t2Row('Total patients (n)', String(n));
+  table2 += '└' + '─'.repeat(t2Col1 + 2) + '┴' + '─'.repeat(t2Col2 + 2) + '┘';
 
   return {
     title,
@@ -271,8 +335,8 @@ n                                    ${String(n).padStart(12)}
     references,
     table1,
     table2,
-    figure1Caption: `TyG index vs HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, ${pStr}, n = ${n})`,
-    figure2Caption: `Distribution of TyG index; cohort with HbA1c (n = ${n}). Mean HbA1c ${stats.meanHbA1c.toFixed(2)}%.`,
-    figure3Caption: `HbA1c ≥7.0%: ${stats.countHbA1cAtLeast7} patients (${stats.pctHbA1cAtLeast7.toFixed(1)}%).`,
+    figure1Caption: `Waist circumference vs HbA1c. ${pearsonLine}, n = ${n}.`,
+    figure2Caption: `Distribution of HbA1c; cohort with TyG and HbA1c (n = ${n}). Mean HbA1c ${hba1cMeanSd}%.`,
+    figure3Caption: `Clinical HbA1c bands (Dr. Muddu): value_counts diabetesRisk — Normal, Prediabetes, Good, Poor, Alert (n = ${n}).`,
   };
 }

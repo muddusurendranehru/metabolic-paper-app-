@@ -1,37 +1,65 @@
 /**
- * ADA 2026 – Diabetes risk from HbA1c only (waist ignored).
- * Paper 3: Diabetes-Risk column and manuscript stratification.
+ * Dr. Muddu's Clinical HbA1c Bands – GLYCEMIC CONTROL MONITORING (not ADA diagnostic).
+ * Paper 3: TyG-HbA1c correlation study. Used in clinical practice at HOMA Clinic, Hyderabad.
+ *
+ * YOUR CLINICAL THRESHOLDS – IMPLEMENTED
+ * ┌─────────────────────────────────────────────────────────────┐
+ * │  HbA1c Value      │ Diabetes-Risk      │ Color             │
+ * ├─────────────────────────────────────────────────────────────┤
+ * │  < 6.0%          │ Normal             │ Green              │
+ * │  6.1 - 6.5%      │ Prediabetes        │ Yellow (amber)     │
+ * │  6.6 - 7.0%      │ Good               │ Blue               │
+ * │  7.1 - 8.0%      │ Poor               │ Orange             │
+ * │  > 8.1%          │ Alert              │ Dark Red           │
+ * │  null/undefined  │ Pending            │ Gray               │
+ * ├─────────────────────────────────────────────────────────────┤
+ * │  Matches lab report format · Clinically meaningful          │
+ * │  Auto-calculated on HbA1c entry/edit · Paper 3 uses these   │
+ * └─────────────────────────────────────────────────────────────┘
  */
 
-export type DiabetesRiskLevel = "Normal" | "Prediabetes" | "Diabetes" | "Very High";
+export type DiabetesRiskLevel = "Normal" | "Prediabetes" | "Good" | "Poor" | "Alert";
 export type DiabetesRiskWithPending = DiabetesRiskLevel | "Pending";
 
-/** HbA1c thresholds: <5.7 Normal, 5.7-6.4 Prediabetes, 6.5-7.9 Diabetes, ≥8.0 Very High. Returns "Pending" when HbA1c missing. */
-export function getDiabetesRisk(hba1c: number | null | undefined): DiabetesRiskWithPending {
-  if (hba1c == null || !Number.isFinite(hba1c)) return "Pending";
-  if (hba1c < 5.7) return "Normal";
-  if (hba1c < 6.5) return "Prediabetes";
-  if (hba1c < 8) return "Diabetes";
-  return "Very High";
+/** Dr. Muddu's clinical HbA1c bands. Returns "Pending" when HbA1c missing.
+ * Check: 5.8→Normal 🟢, 6.3→Prediabetes 🟡, 6.8→Good 🔵, 7.5→Poor 🟠, 8.5→Alert 🔴 */
+export function calculateDiabetesRisk(hba1c: number | null | undefined): DiabetesRiskWithPending {
+  if (hba1c === null || hba1c === undefined) return "Pending";
+  if (!Number.isFinite(hba1c)) return "Pending";
+
+  if (hba1c < 6.0) return "Normal"; // Green
+  if (hba1c >= 6.1 && hba1c <= 6.5) return "Prediabetes"; // Yellow
+  if (hba1c >= 6.6 && hba1c <= 7.0) return "Good"; // Blue
+  if (hba1c >= 7.1 && hba1c <= 8.0) return "Poor"; // Orange
+  if (hba1c > 8.1) return "Alert"; // Dark Red
+
+  return "Pending";
 }
 
-/** Tailwind classes for ADA 2026 diabetes risk badge (Normal=green, Prediabetes=amber, Diabetes=orange, Very High=red, Pending=gray). */
-export function getDiabetesRiskColor(level: DiabetesRiskWithPending): string {
-  switch (level) {
+/** Alias for callers using getDiabetesRisk – uses Dr. Muddu's clinical bands. */
+export function getDiabetesRisk(hba1c: number | null | undefined): DiabetesRiskWithPending {
+  return calculateDiabetesRisk(hba1c);
+}
+
+/** Tailwind classes for risk badge: Normal=green, Prediabetes=yellow, Good=blue, Poor=orange, Alert=dark red, default=gray. */
+export function getDiabetesRiskColor(risk: DiabetesRiskWithPending): string {
+  switch (risk) {
     case "Normal":
-      return "bg-green-100 text-green-700";
+      return "bg-green-100 text-green-800 border-green-200";
     case "Prediabetes":
-      return "bg-amber-100 text-amber-800";
-    case "Diabetes":
-      return "bg-orange-200 text-orange-900";
-    case "Very High":
-      return "bg-red-200 text-red-900";
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    case "Good":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "Poor":
+      return "bg-orange-100 text-orange-800 border-orange-200";
+    case "Alert":
+      return "bg-red-900 text-white border-red-900";
     default:
-      return "bg-gray-100 text-gray-600";
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
 }
 
-/** Set diabetesRisk on a patient/row from hba1c (ADA 2026). Use after setting TyG/risk so row stays in sync. */
+/** Set diabetesRisk on a patient/row from hba1c (Dr. Muddu's clinical bands). */
 export function updatePatientDiabetesRisk<T extends { hba1c?: number | null }>(
   p: T
 ): T & { diabetesRisk: DiabetesRiskWithPending } {
@@ -41,51 +69,117 @@ export function updatePatientDiabetesRisk<T extends { hba1c?: number | null }>(
 export const PAPER3_TITLE =
   "Waist Circumference Predicts Lipotoxicity (TG≥220) AND Glucotoxicity (HbA1c≥8.0): ADA Risk Stratification";
 
-/** Counts and percentages for ADA 2026 diabetes risk (HbA1c-based). Pending excluded from % of "known". */
+const CLINICAL_LEVELS = ["Normal", "Prediabetes", "Good", "Poor", "Alert", "Pending"] as const;
+
+/** Resolve diabetes risk from stored field or compute from HbA1c. */
+function resolveDiabetesRisk(p: { hba1c?: number | null; diabetesRisk?: DiabetesRiskWithPending | null }): DiabetesRiskWithPending {
+  return p.diabetesRisk ?? getDiabetesRisk(p.hba1c);
+}
+
+/** Counts and percentages for Dr. Muddu's clinical HbA1c bands. Uses verified patients with HbA1c; counts by diabetesRisk (fallback getDiabetesRisk(hba1c)). */
 export function getDiabetesRiskStats(
-  patients: { hba1c?: number | null }[]
+  patients: { hba1c?: number | null; status?: string; diabetesRisk?: DiabetesRiskWithPending | null }[]
 ): {
+  total: number;
   normal: number;
   normalPct: string;
   prediabetes: number;
   prediabetesPct: string;
-  diabetes: number;
-  diabetesPct: string;
-  veryHigh: number;
-  veryHighPct: string;
+  good: number;
+  goodPct: string;
+  poor: number;
+  poorPct: string;
+  alert: number;
+  alertPct: string;
   pending: number;
   pendingPct: string;
 } {
-  const n = patients.length;
-  const normal = patients.filter((p) => getDiabetesRisk(p.hba1c) === "Normal").length;
-  const prediabetes = patients.filter((p) => getDiabetesRisk(p.hba1c) === "Prediabetes").length;
-  const diabetes = patients.filter((p) => getDiabetesRisk(p.hba1c) === "Diabetes").length;
-  const veryHigh = patients.filter((p) => getDiabetesRisk(p.hba1c) === "Very High").length;
-  const pending = patients.filter((p) => getDiabetesRisk(p.hba1c) === "Pending").length;
-  const known = normal + prediabetes + diabetes + veryHigh;
+  const verified = patients.filter((p) => p.status === "verified");
+  const withHba1c = verified.filter((p) => p.hba1c != null && Number.isFinite(p.hba1c));
+  const total = withHba1c.length;
   const pct = (count: number, denom: number) => (denom > 0 ? ((count / denom) * 100).toFixed(1) : "0");
+
+  const normal = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Normal").length;
+  const prediabetes = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Prediabetes").length;
+  const good = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Good").length;
+  const poor = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Poor").length;
+  const alertCount = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Alert").length;
+  const pending = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Pending").length;
+
   return {
+    total,
     normal,
-    normalPct: pct(normal, n),
+    normalPct: pct(normal, total),
     prediabetes,
-    prediabetesPct: pct(prediabetes, n),
-    diabetes,
-    diabetesPct: pct(diabetes, n),
-    veryHigh,
-    veryHighPct: pct(veryHigh, n),
+    prediabetesPct: pct(prediabetes, total),
+    good,
+    goodPct: pct(good, total),
+    poor,
+    poorPct: pct(poor, total),
+    alert: alertCount,
+    alertPct: pct(alertCount, total),
     pending,
-    pendingPct: pct(pending, n),
+    pendingPct: pct(pending, total),
   };
 }
 
-/** Diabetes risk (ADA 2026) counts by TyG risk category. */
+/** Same as getDiabetesRiskStats but without filtering by status === "verified". Use for manuscript so cohort (e.g. all with TyG + HbA1c) drives n and band counts; respects CSV diabetesRisk via resolveDiabetesRisk. */
+export function getDiabetesRiskStatsForCohort(
+  patients: { hba1c?: number | null; diabetesRisk?: DiabetesRiskWithPending | null }[]
+): {
+  total: number;
+  normal: number;
+  normalPct: string;
+  prediabetes: number;
+  prediabetesPct: string;
+  good: number;
+  goodPct: string;
+  poor: number;
+  poorPct: string;
+  alert: number;
+  alertPct: string;
+  pending: number;
+  pendingPct: string;
+} {
+  const withHba1c = patients.filter((p) => p.hba1c != null && Number.isFinite(p.hba1c));
+  const total = withHba1c.length;
+  const pct = (count: number, denom: number) => (denom > 0 ? ((count / denom) * 100).toFixed(1) : "0");
+
+  const normal = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Normal").length;
+  const prediabetes = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Prediabetes").length;
+  const good = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Good").length;
+  const poor = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Poor").length;
+  const alertCount = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Alert").length;
+  const pending = withHba1c.filter((p) => resolveDiabetesRisk(p) === "Pending").length;
+
+  return {
+    total,
+    normal,
+    normalPct: pct(normal, total),
+    prediabetes,
+    prediabetesPct: pct(prediabetes, total),
+    good,
+    goodPct: pct(good, total),
+    poor,
+    poorPct: pct(poor, total),
+    alert: alertCount,
+    alertPct: pct(alertCount, total),
+    pending,
+    pendingPct: pct(pending, total),
+  };
+}
+
+/** Diabetes risk (clinical bands) counts by TyG risk category. */
 export function getDiabetesRiskByTyG(
   patients: { risk?: string; hba1c?: number | null }[]
-): Record<string, { total: number; normal: number; prediabetes: number; diabetes: number; veryHigh: number }> {
-  const byTyG: Record<string, { total: number; normal: number; prediabetes: number; diabetes: number; veryHigh: number }> = {};
+): Record<string, { total: number; normal: number; prediabetes: number; good: number; poor: number; alert: number }> {
+  const byTyG: Record<
+    string,
+    { total: number; normal: number; prediabetes: number; good: number; poor: number; alert: number }
+  > = {};
   const tygRisks = ["Normal", "Moderate", "High", "Pending"] as const;
   for (const r of tygRisks) {
-    byTyG[r] = { total: 0, normal: 0, prediabetes: 0, diabetes: 0, veryHigh: 0 };
+    byTyG[r] = { total: 0, normal: 0, prediabetes: 0, good: 0, poor: 0, alert: 0 };
   }
   for (const p of patients) {
     const tygRisk = (p.risk && byTyG[p.risk] ? p.risk : "Normal") as keyof typeof byTyG;
@@ -93,8 +187,11 @@ export function getDiabetesRiskByTyG(
     byTyG[tygRisk].total += 1;
     if (dr === "Normal") byTyG[tygRisk].normal += 1;
     else if (dr === "Prediabetes") byTyG[tygRisk].prediabetes += 1;
-    else if (dr === "Diabetes") byTyG[tygRisk].diabetes += 1;
-    else if (dr === "Very High") byTyG[tygRisk].veryHigh += 1;
+    else if (dr === "Good") byTyG[tygRisk].good += 1;
+    else if (dr === "Poor") byTyG[tygRisk].poor += 1;
+    else if (dr === "Alert") byTyG[tygRisk].alert += 1;
   }
   return byTyG;
 }
+
+export { CLINICAL_LEVELS };
