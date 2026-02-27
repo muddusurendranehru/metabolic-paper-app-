@@ -25,6 +25,11 @@ export function PaperNav() {
             📤 Step 6: Journal Submission
           </Link>
 
+          {/* Step 7: Quality Assurance */}
+          <Link href="/step7" className="px-4 py-3 text-gray-600 hover:text-indigo-600 text-sm font-medium">
+            ✅ Step 7: Quality
+          </Link>
+
           {/* Paper 2: Submitted – status only */}
           <Link href="/submitted" className="px-4 py-3 text-amber-600 hover:text-amber-700 text-sm font-medium">
             📤 Paper 2: Submitted

@@ -38,6 +38,9 @@ export function Header() {
               <Link href="/step6" className="text-gray-600 hover:text-indigo-600 font-medium">
                 Step 6: Journal Submission
               </Link>
+              <Link href="/step7" className="text-gray-600 hover:text-indigo-600 font-medium">
+                Step 7: Quality
+              </Link>
             </nav>
 
             {/* 3-Paper Status Badges */}
