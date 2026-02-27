@@ -36,10 +36,12 @@ interface Props {
 }
 
 export default function Tab5JCDR({ patientData, onBack }: Props) {
-  const verified = patientData.filter((p: PatientWithStatus) => p.status === 'verified');
-  const effectivePatients = verified.length > 0 ? verified : patientData;
+  const effectivePatients = useMemo(() => {
+    const verified = patientData.filter((p: PatientWithStatus) => p.status === 'verified');
+    return verified.length > 0 ? verified : patientData;
+  }, [patientData]);
+  const patientsWithHbA1c = useMemo(() => filterPatientsWithTyGAndHbA1c(patientData), [patientData]);
   const ijcprManuscript = useMemo(() => generateIJCPRManuscript(effectivePatients), [effectivePatients]);
-  const patientsWithHbA1c = filterPatientsWithTyGAndHbA1c(patientData);
   const hba1cManuscript = useMemo(
     () => (patientsWithHbA1c.length > 0 ? generateHbA1cManuscript(patientsWithHbA1c) : null),
     [patientsWithHbA1c]
@@ -56,13 +58,16 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
   const displayTable1 = selectedPaper === 'paper3' ? table1DataPaper3 : table1Data;
   const hba1cStats = useMemo(() => calculateHbA1cStats(patientData), [patientData]);
 
+  // Sync manuscript when paper selection changes only (avoid loop from new memo refs each render)
   useEffect(() => {
     if (selectedPaper === 'paper2') {
       setManuscript(ijcprManuscript);
     } else if (hba1cManuscript) {
       setManuscript(hba1cManuscript as ManuscriptData);
+    } else {
+      setManuscript(ijcprManuscript);
     }
-  }, [selectedPaper, ijcprManuscript, hba1cManuscript]);
+  }, [selectedPaper]); // eslint-disable-line react-hooks/exhaustive-deps -- ijcpr/hba1c read from closure on purpose to avoid max update depth
 
   const handleEdit = (section: string) => {
     setIsEditing(prev => ({ ...prev, [section]: true }));

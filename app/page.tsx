@@ -25,6 +25,12 @@ export default function Home() {
           >
             ✏️ Paper 3: Generate Manuscript
           </Link>
+          <Link
+            href="/step6"
+            className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200 hover:bg-indigo-100 font-medium"
+          >
+            📤 Step 6: Journal Submission
+          </Link>
         </div>
       </nav>
       <HomeTabs />

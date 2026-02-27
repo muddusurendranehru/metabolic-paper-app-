@@ -8,6 +8,7 @@ import type { Patient } from '@/lib/types/patient';
 import { correlation, correlationPValue } from '@/lib/tyg';
 import { anonymizePatients } from './anonymize';
 import { getDiabetesRisk, getDiabetesRiskStats, getDiabetesRiskStatsForCohort, PAPER3_TITLE } from './diabetes-risk';
+import { normalizeManuscriptText } from './manuscript-text-normalizer';
 
 export type PatientWithStatus = Patient & { status?: string };
 
@@ -86,6 +87,12 @@ export interface HbA1cManuscriptData {
   figure1Caption: string;
   figure2Caption: string;
   figure3Caption: string;
+  clinicalSignificance?: string;
+  keyMessages?: string;
+  fundingStatement?: string;
+  conflictOfInterest?: string;
+  authorContributions?: string;
+  dataAvailability?: string;
 }
 
 function pad(s: string, len: number): string {
@@ -100,6 +107,8 @@ export function generateHbA1cManuscript(
   const anonymized = anonymizePatients(withBoth);
   const n = stats.n;
 
+  // Use value-only for prose to avoid "P P = 0.001" when concatenated
+  const pValOnly = stats.tygHbA1cP < 0.001 ? '< 0.001' : `= ${stats.tygHbA1cP.toFixed(3)}`;
   const pStr = stats.tygHbA1cP < 0.001 ? 'P < 0.001' : `P = ${stats.tygHbA1cP.toFixed(3)}`;
   const meanAge = withBoth.length > 0 ? withBoth.reduce((s, p) => s + (p.age ?? 0), 0) / withBoth.length : 0;
   const ageValues = withBoth.map((p) => p.age ?? 0);
@@ -162,7 +171,7 @@ export function generateHbA1cManuscript(
 
 Methods: This cross-sectional study was conducted at HOMA Clinic, Hyderabad. Of ${nScreened} patients screened, ${n} (${pctIncluded}%) with both TyG index and HbA1c measurements were included. TyG index was calculated as ln(fasting triglycerides × fasting glucose / 2). Diabetes risk was stratified by HbA1c: Normal (<6.0%), Prediabetes (6.1-6.5%), Good control (6.6-7.0%), Poor control (7.1-8.0%), Alert (>8.1%). Pearson correlation coefficient was calculated.
 
-Results: Mean age was ${meanAge.toFixed(1)} ± ${sdAge.toFixed(1)} years. Mean TyG index was ${meanTyGForText.toFixed(2)} ± ${sdTyG.toFixed(2)}. Mean HbA1c was ${stats.meanHbA1c.toFixed(2)}% ± ${stats.sdHbA1c.toFixed(2)}%. Diabetes risk distribution: Normal ${diabetesStats.normalPct}%, Prediabetes ${diabetesStats.prediabetesPct}%, Good ${diabetesStats.goodPct}%, Poor ${diabetesStats.poorPct}%, Alert ${diabetesStats.alertPct}%${Number(diabetesStats.pending) > 0 ? `, Pending/Missing ${diabetesStats.pendingPct}%` : ''} (= 100%). Pearson correlation analysis revealed a significant ${corrDir} correlation between TyG index and HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, ${pStrManuscript}).
+Results: Mean age was ${meanAge.toFixed(1)} ± ${sdAge.toFixed(1)} years. Mean TyG index was ${meanTyGForText.toFixed(2)} ± ${sdTyG.toFixed(2)}. Mean HbA1c was ${stats.meanHbA1c.toFixed(2)}% ± ${stats.sdHbA1c.toFixed(2)}%. Diabetes risk distribution: Normal ${diabetesStats.normalPct}%, Prediabetes ${diabetesStats.prediabetesPct}%, Good ${diabetesStats.goodPct}%, Poor ${diabetesStats.poorPct}%, Alert ${diabetesStats.alertPct}%${Number(diabetesStats.pending) > 0 ? `, Pending/Missing ${diabetesStats.pendingPct}%` : ''} (= 100%). Pearson correlation analysis revealed a significant ${corrDir} correlation between TyG index and HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, P ${pValOnly}).
 
 Conclusion: TyG index shows significant positive correlation with HbA1c in Indian adults. As a simple, cost-effective marker derived from routine fasting tests, TyG index may serve as a practical screening tool for identifying individuals requiring glycemic monitoring and early intervention.`;
 
@@ -202,7 +211,7 @@ Statistical Analysis:
 - Pearson correlation coefficient (r) for TyG-HbA1c relationship
 - P-value <0.05 considered statistically significant`;
 
-  const results = `Baseline Characteristics:
+  const results = normalizeManuscriptText(`Baseline Characteristics:
 A total of ${n} patients with complete TyG index and HbA1c measurements were included in the analysis.${nValid === n && n > 0 ? ` All ${n} patients were verified and included in correlation and band distribution calculations.` : nValid > 0 && nValid < n ? ` Of these, ${nValid} were verified and included in correlation and band distribution calculations.` : ''} Mean age was ${meanAge.toFixed(1)} ± ${sdAge.toFixed(1)} years.
 
 Metabolic Parameters:
@@ -224,9 +233,9 @@ Clinical Bands Distribution (n=${n}):
 - Total: ${n} (100%) ✅
 
 Correlation Analysis:
-Pearson correlation analysis revealed a significant ${corrDir} correlation between TyG index and HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, ${pStrManuscript}), indicating that higher TyG index values are associated with ${stats.tygHbA1cR > 0 ? 'higher' : 'lower'} HbA1c levels. See Table 1, Table 2, and Figures 1–3.`;
+Pearson correlation analysis revealed a significant ${corrDir} correlation between TyG index and HbA1c (r = ${stats.tygHbA1cR.toFixed(2)}, P ${pValOnly}), indicating that higher TyG index values are associated with ${stats.tygHbA1cR > 0 ? 'higher' : 'lower'} HbA1c levels. See Table 1, Table 2, and Figures 1–3.`);
 
-  const discussion = `Our study demonstrates a significant ${corrDir} correlation between TyG index and HbA1c in Indian adults (r = ${stats.tygHbA1cR.toFixed(2)}, ${pStr}). This finding suggests that TyG index may serve as a useful marker for identifying individuals with poor glycemic control.
+  const discussion = normalizeManuscriptText(`Our study demonstrates a significant ${corrDir} correlation between TyG index and HbA1c in Indian adults (r = ${stats.tygHbA1cR.toFixed(2)}, P ${pValOnly}). This finding suggests that TyG index may serve as a useful marker for identifying individuals with poor glycemic control.
 
 Clinical Implications:
 The correlation between TyG index and HbA1c has important clinical implications. First, TyG index can be calculated from routine fasting lipid and glucose tests that are widely available and inexpensive. Second, it provides an objective measure of metabolic risk that complements HbA1c monitoring. Third, it can help identify high-risk individuals who may benefit from early lifestyle interventions.
@@ -240,7 +249,7 @@ Limitations:
 1. Cross-sectional design precludes causal inferences
 2. Single-center study limits generalizability
 3. Sample size of ${n} patients
-4. Lack of direct insulin resistance measurements for comparison`;
+4. Lack of direct insulin resistance measurements for comparison`);
 
   const conclusion = `TyG index shows significant positive correlation with HbA1c in Indian adults. As a simple, cost-effective marker derived from routine fasting tests, TyG index may serve as a practical screening tool for identifying individuals requiring glycemic monitoring and early intervention.`;
 
@@ -272,7 +281,17 @@ Limitations:
 
 14. Low S, Khoo KCJ, Irwan B, et al. The role of triglyceride glucose index in development of type 2 diabetes mellitus. Diabetes Res Clin Pract. 2020;163:108131.
 
-15. American Diabetes Association. Classification and diagnosis of diabetes: standards of medical care in diabetes—2024. Diabetes Care. 2024;47(Suppl 1):S20-S42.`;
+15. American Diabetes Association. Classification and diagnosis of diabetes: standards of medical care in diabetes—2024. Diabetes Care. 2024;47(Suppl 1):S20-S42.
+
+16. Unwin N, Gan D, Whiting D. The IDF Diabetes Atlas: providing evidence, raising awareness and promoting action. Diabetes Res Clin Pract. 2010;87(1):2-3.
+
+17. Shaw JE, Sicree RA, Zimmet PZ. Global estimates of the prevalence of diabetes for 2010 and 2030. Diabetes Res Clin Pract. 2010;87(1):4-14.
+
+18. Guariguata L, Whiting DR, Hambleton I, et al. Global estimates of diabetes prevalence for 2013 and projections for 2035. Diabetes Res Clin Pract. 2014;103(2):137-149.
+
+19. Saeedi P, Petersohn I, Salpea P, et al. Global and regional diabetes prevalence estimates for 2019 and projections for 2030 and 2045: Results from the International Diabetes Federation Diabetes Atlas, 9th edition. Diabetes Res Clin Pract. 2019;157:107843.
+
+20. Sun H, Saeedi P, Karuranga S, et al. IDF Diabetes Atlas: Global, regional and country-level diabetes prevalence estimates for 2021 and projections for 2045. Diabetes Res Clin Pract. 2022;183:109119.`;
 
   // Table 1: Baseline Characteristics of Study Participants (n=64)
   const col1W = 32;
@@ -338,5 +357,17 @@ Limitations:
     figure1Caption: `Waist circumference vs HbA1c. ${pearsonLine}, n = ${n}.`,
     figure2Caption: `Distribution of HbA1c; cohort with TyG and HbA1c (n = ${n}). Mean HbA1c ${hba1cMeanSd}%.`,
     figure3Caption: `Clinical HbA1c bands (Dr. Muddu): value_counts diabetesRisk — Normal, Prediabetes, Good, Poor, Alert (n = ${n}).`,
+
+    clinicalSignificance: `TyG index correlates with HbA1c and can support identification of individuals with poor glycemic control. As a simple marker from routine fasting tests, TyG may help prioritise patients for HbA1c testing and lifestyle intervention in resource-limited settings.`,
+
+    keyMessages: `• TyG index correlates significantly with HbA1c in Indian adults (r = ${stats.tygHbA1cR.toFixed(2)}, P ${pValOnly}).
+• TyG is derived from routine fasting triglycerides and glucose; no additional cost.
+• TyG–HbA1c correlation supports use of TyG as a practical screening adjunct for glycemic risk.
+• Clinical HbA1c bands (Normal, Prediabetes, Good, Poor, Alert) aid risk stratification (n = ${n}).`,
+
+    fundingStatement: 'No external funding received.',
+    conflictOfInterest: 'None declared.',
+    authorContributions: 'MSN: Conceptualization, Methodology, Formal analysis, Investigation, Data curation, Writing – original draft, Writing – review & editing, Supervision. All authors read and approved the final manuscript.',
+    dataAvailability: 'The data that support the findings of this study are available from the corresponding author upon reasonable request, subject to institutional and ethical approval.',
   };
 }
