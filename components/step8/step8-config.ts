@@ -1,4 +1,6 @@
-/** Step 8: Social media content – paper metadata and template generators. */
+/** Step 8: Social media content – paper metadata and template generators. Patient names never revealed. */
+
+import { redactPatientIdentifiersFromText } from "@/lib/utils/anonymize";
 
 export interface Step8PaperMeta {
   title: string;
@@ -32,12 +34,13 @@ function shortenTitle(title: string, maxChars: number = 200): string {
 }
 
 export function generateTwitterThread(meta: Step8PaperMeta): string[] {
+  const keyFindingSafe = redactPatientIdentifiersFromText(meta.keyFinding);
   const t = shortenTitle(meta.title, 200);
   const tweets = [
     `🆕 NEW PUBLICATION ALERT!\n${t}\nPublished: ${meta.journal}\nn = ${meta.n} patients | ${meta.location}\nThread 👇 #TyG #Diabetes #MetabolicHealth`,
     `❌ Problem: Traditional diabetes risk tests can be expensive and slow.\nCurrent gap: We needed a simple, cost-effective marker for Indian clinics.`,
     `🔬 What we did:\n• Study: ${meta.design} study\n• Setting: ${meta.location}\n• Measured: TyG index vs HbA1c, 5 clinical risk bands`,
-    `📊 KEY FINDING:\n${meta.keyFinding}\np < ${meta.pValue} ✅ Highly significant!\nClinical relevance: TyG from routine fasting labs can support diabetes risk screening.`,
+    `📊 KEY FINDING:\n${keyFindingSafe}\np < ${meta.pValue} ✅ Highly significant!\nClinical relevance: TyG from routine fasting labs can support diabetes risk screening.`,
     `💡 What this means:\nDoctors can use TyG + HbA1c for risk stratification with no extra cost.\n📄 Full paper: ${meta.doi}\nQuestions? Comment below!\n#Diabetes #Metabolism #IndianResearch`,
   ];
   return tweets;
@@ -55,7 +58,7 @@ Metabolic screening in resource-limited settings needs simple, cost-effective to
 We analyzed ${meta.n} patients at ${meta.location}. ${meta.design} design. TyG index and HbA1c were measured; ADA 2026 risk bands applied.
 
 **Key Findings:**
-✅ ${meta.keyFinding}
+✅ ${redactPatientIdentifiersFromText(meta.keyFinding)}
 ✅ TyG-HbA1c correlation r = ${meta.rValue}, p < ${meta.pValue}
 ✅ Practical implications for routine metabolic screening in Indian healthcare
 
@@ -94,7 +97,7 @@ export function generateInfographicPrompts(meta: Step8PaperMeta): {
   dallE: string;
 } {
   return {
-    canva: `Create medical infographic. Title: "${shortenTitle(meta.title, 60)}". Layout: Vertical 1080x1350px. Sections: 1) Header: HOMA Clinic + NEW RESEARCH. 2) Key Finding: "${meta.keyFinding.slice(0, 80)}..." r=${meta.rValue} p<${meta.pValue}. 3) Bar chart: 5 HbA1c bands. Colors: Green→Yellow→Blue→Orange→Red. 4) Sample: n=${meta.n} | ${meta.location}. 5) Footer: ${meta.journal} | ${meta.doi}. Style: Modern medical, clean. Fonts: Montserrat, Open Sans.`,
+    canva: `Create medical infographic. Title: "${shortenTitle(meta.title, 60)}". Layout: Vertical 1080x1350px. Sections: 1) Header: HOMA Clinic + NEW RESEARCH. 2) Key Finding: "${redactPatientIdentifiersFromText(meta.keyFinding).slice(0, 80)}..." r=${meta.rValue} p<${meta.pValue}. 3) Bar chart: 5 HbA1c bands. Colors: Green→Yellow→Blue→Orange→Red. 4) Sample: n=${meta.n} | ${meta.location}. 5) Footer: ${meta.journal} | ${meta.doi}. Style: Modern medical, clean. Fonts: Montserrat, Open Sans.`,
     midjourney: `/imagine a medical research infographic showing correlation between TyG index and HbA1c, modern minimalist design, bar charts in teal and coral, Indian patient data visualization, professional healthcare aesthetic, clean white background, medical icons, 16:9 --v 6 --style raw`,
     dallE: `Design a square social media graphic (1080x1080px) for a medical research publication. Show correlation between TyG index and HbA1c with r=${meta.rValue} prominently displayed. Title "TyG vs HbA1c: Indian Study", sample size n=${meta.n}, HOMA Clinic branding. Medical blue and white, modern professional style, suitable for LinkedIn/Instagram.`,
   };

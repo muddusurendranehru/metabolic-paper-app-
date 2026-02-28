@@ -1,7 +1,7 @@
 import Link from "next/link";
-import Step9MedicalEducation from "@/components/step9/Step9MedicalEducation";
+import Step11ContentAmplification from "@/components/step11/Step11ContentAmplification";
 
-export default function Step9Page() {
+export default function Step11Page() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <nav className="bg-white border-b border-gray-200 py-3 px-4">
@@ -13,14 +13,20 @@ export default function Step9Page() {
             ← Home
           </Link>
           <Link
-            href="/step8"
+            href="/step9"
             className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200 hover:bg-indigo-100 font-medium"
           >
-            Step 8: Social
+            Step 9: Education
+          </Link>
+          <Link
+            href="/step12"
+            className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 font-medium"
+          >
+            Step 12: Neutral Content
           </Link>
         </div>
       </nav>
-      <Step9MedicalEducation />
+      <Step11ContentAmplification />
     </div>
   );
 }

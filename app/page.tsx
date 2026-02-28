@@ -31,6 +31,12 @@ export default function Home() {
           >
             📤 Step 6: Journal Submission
           </Link>
+          <Link
+            href="/step12"
+            className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 font-medium"
+          >
+            📺 Step 12: Neutral Content
+          </Link>
         </div>
       </nav>
       <HomeTabs />

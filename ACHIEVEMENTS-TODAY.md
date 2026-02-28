@@ -2,6 +2,12 @@
 
 **TyG Index Research Dashboard – 3-Paper System**
 
+**Today:** (1) ContentAmplificationInput-based generators added in `lib/utils`: `generateLectureSlides()` → Slide[], `generateTwitterThread()` → Tweet[] (with optional mediaUrl), `generateYouTubeShortsScript()` → VideoScript (60s scenes with timestamp, visual, textOverlay, voiceover). (2) Helpers: extractKeyTerm, getFormulaForTopic, getNormalRange, getElevatedThreshold, getHookQuestion, getFreeAlternative, formatStatResult—all topic-agnostic. (3) Don’t destroy success: existing Step 11 and research step-11 generators unchanged; new modules additive only.
+
+**Latest (Step 11):** (1) Step 11 Universal Content Amplification added: topic-agnostic template—user inputs topic name, key findings, audience, platform; outputs Twitter, YouTube, Blog, CME-style slides in same format. (2) No hardcoded medical terms; no changes to step-1–step-6; no patientData. (3) Additive only: new files under `components/step11` and `app/step11`; if Step 11 is disabled, Steps 1–6 remain fully functional.
+
+**Latest (Step 9):** (1) Step 9 Medical Education completed: 10 MCQs (2 per category), 5-slide Gamma Markdown, quiz UI (Next/Prev), Export PDF, Export to Gamma. (2) All Step 9 input is local state only—no patientData; no imports from step-1–step-6. (3) Steps 7–9 remain optional; disabling them does not break steps 1–6.
+
 ---
 
 ```

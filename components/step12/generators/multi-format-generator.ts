@@ -1,0 +1,140 @@
+/**
+ * Step 12 – multi-format content generator. Imports ONLY from @/lib/utils/step12 and local generators.
+ * Topic-agnostic: NO hardcoded TyG/HbA1c/Waist, NO research metrics, NO patient data.
+ * Video: 60–90s script + AI prompt for Grok/HyperNatural (scene-by-scene).
+ */
+
+import type { Step12Input } from "@/lib/utils/step12";
+import {
+  extractPlainText,
+  extractSnippet,
+  formatSection,
+  formatBullets,
+  formatDocument,
+} from "@/lib/utils/step12";
+import { generateBlog } from "./blog";
+import { generateHandout } from "./handout";
+import { generateFaq } from "./faq";
+
+/** Output of generateAllFormats – one entry per required format. */
+export interface Step12AllFormats {
+  blog: string;
+  twitterThread: string;
+  linkedin: string;
+  handout: string;
+  youtubeScript: string;
+  youtubeAIPrompt: string;
+  faq: string;
+  whatsapp: string;
+}
+
+/** Get source text from Step12Input (topic or pasted/uploaded text). No patientData. */
+function getSourceText(input: Step12Input): string {
+  const raw =
+    input.sourceType === "from-scratch"
+      ? input.topic
+      : (input.pastedText ?? input.topic ?? "");
+  return extractPlainText(raw) || input.topic || "";
+}
+
+/** Split text into tweets (max 7, each ≤280 chars). No invented metrics. */
+function toTwitterThread(text: string, maxTweets: number = 7): string {
+  const t = extractPlainText(text);
+  if (!t) return "(No content)";
+  const maxLen = 280;
+  const tweets: string[] = [];
+  let rest = t;
+  while (rest && tweets.length < maxTweets) {
+    if (rest.length <= maxLen) {
+      tweets.push(rest.trim());
+      break;
+    }
+    const chunk = rest.slice(0, maxLen);
+    const lastSpace = chunk.lastIndexOf(" ");
+    const cut = lastSpace > maxLen * 0.5 ? lastSpace : maxLen;
+    tweets.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  return tweets.map((s, i) => `Tweet ${i + 1}: ${s}`).join("\n\n");
+}
+
+/** LinkedIn article ~300 words (~1500 chars). Neutral, evidence-based. */
+function toLinkedinArticle(text: string, title?: string): string {
+  const t = extractPlainText(text);
+  const body = extractSnippet(t, 1500) || "Key points from the topic.";
+  const heading = title ? `## ${title}\n\n` : "";
+  return `${heading}${body}`.trim();
+}
+
+/** Blog: target 800–1200 words when source is long; structured sections from source. */
+function toBlogPost(sourceText: string, title?: string): string {
+  return generateBlog(sourceText, title);
+}
+
+/** Patient handout: 1-page style (key points). */
+function toHandout(sourceText: string, title?: string): string {
+  return generateHandout(sourceText, title);
+}
+
+/** YouTube script 60–90s: hook → problem → science → solution → CTA. No invented p/r/n values. */
+function toYoutubeScript(sourceText: string, title?: string): string {
+  const t = extractPlainText(sourceText);
+  const hook = extractSnippet(t, 80) || "Introduce the topic.";
+  const main = extractSnippet(t, 600) || "Studies show relevant evidence. Discuss key points.";
+  const cta = "Subscribe for more. Link in description.";
+  const sections = [
+    formatSection("Hook (0–15s)", hook),
+    formatSection("Problem (15–25s)", "Briefly state the issue or question."),
+    formatSection("Science (25–50s)", main),
+    formatSection("Solution (50–75s)", "Summarize takeaway. Use 'studies show' where appropriate."),
+    formatSection("CTA (75–90s)", cta),
+  ];
+  return formatDocument([formatSection(title ?? "YouTube Script (60–90s)", ""), ...sections]);
+}
+
+/** AI video prompt for Grok/HyperNatural: scene-by-scene visual descriptions. No metrics. */
+function toYoutubeAIPrompt(sourceText: string, title?: string): string {
+  const t = extractPlainText(sourceText);
+  const topic = title || extractSnippet(t, 60) || "Medical education topic";
+  const scenes = [
+    "Scene 1: Presenter or narrator on neutral background; friendly, professional tone.",
+    "Scene 2: Simple graphic or text card with the main topic title.",
+    "Scene 3: B-roll or illustration showing the problem or question (no data charts unless user-provided).",
+    "Scene 4: Clear explanation visuals; use 'studies show' style, no specific p-values or r-values.",
+    "Scene 5: Summary card with 1–2 takeaway points.",
+    "Scene 6: CTA – subscribe, link in description. Clean, minimal.",
+  ];
+  const intro = `AI Video Prompt (Grok/HyperNatural)\nTopic: ${topic}\nTone: Educational, evidence-based. No invented statistics.\n\n`;
+  return intro + formatBullets(scenes);
+}
+
+/** FAQ: 5–10 Q&A pairs from source lines. */
+function toFaq(sourceText: string, title?: string): string {
+  return generateFaq(sourceText, title);
+}
+
+/** WhatsApp: 160 chars. */
+function toWhatsapp(sourceText: string): string {
+  const t = extractPlainText(sourceText);
+  return extractSnippet(t, 160) || "(No content)";
+}
+
+/**
+ * Generate all 7 formats from a single Step12Input.
+ * Content is topic-agnostic; no hardcoded research terms, no patient data, no invented metrics.
+ */
+export function generateAllFormats(input: Step12Input): Step12AllFormats {
+  const sourceText = getSourceText(input);
+  const title = input.topic || undefined;
+
+  return {
+    blog: toBlogPost(sourceText, title),
+    twitterThread: toTwitterThread(sourceText),
+    linkedin: toLinkedinArticle(sourceText, title),
+    handout: toHandout(sourceText, title),
+    youtubeScript: toYoutubeScript(sourceText, title),
+    youtubeAIPrompt: toYoutubeAIPrompt(sourceText, title),
+    faq: toFaq(sourceText, title),
+    whatsapp: toWhatsapp(sourceText),
+  };
+}

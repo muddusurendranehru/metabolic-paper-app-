@@ -6,7 +6,8 @@
     "dev": "next dev -p 3030",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:step12": "eslint app/step12 components/step12 --rule \"no-restricted-imports: [\\\"error\\\", {\\\"paths\\\": [{\\\"name\\\": \\\"app/research\\\", \\\"message\\\": \\\"Step 12 must be independent\\\"}]}]\""
   },
   "dependencies": {
     "@tanstack/react-table": "^8.21.3",
