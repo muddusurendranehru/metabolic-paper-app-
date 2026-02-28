@@ -1,15 +1,20 @@
 import Link from "next/link";
+import Step8SocialMedia from "@/components/step8/Step8SocialMedia";
 
 export default function Step8Page() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
-        <h1 className="text-2xl font-bold text-indigo-900 mb-2">Step 8: Social Media</h1>
-        <p className="text-gray-600 mb-6">Twitter thread, LinkedIn, YouTube script, infographics. Coming next.</p>
-        <Link href="/step7" className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-medium hover:bg-gray-300">
-          ← Back to Step 7
-        </Link>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <nav className="bg-white border-b border-gray-200 py-3 px-4">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-4 text-sm">
+          <Link href="/" className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-800 border border-gray-200 hover:bg-gray-200 font-medium">
+            ← Home
+          </Link>
+          <Link href="/step7" className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200 hover:bg-indigo-100 font-medium">
+            Step 7: Quality
+          </Link>
+        </div>
+      </nav>
+      <Step8SocialMedia />
     </div>
   );
 }

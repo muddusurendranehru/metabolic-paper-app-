@@ -91,11 +91,11 @@ Check your metabolic health at HOMA Clinic. Paper link in description. Subscribe
 export function generateInfographicPrompts(meta: Step8PaperMeta): {
   canva: string;
   midjourney: string;
-  dall-e: string;
+  dallE: string;
 } {
   return {
     canva: `Create medical infographic. Title: "${shortenTitle(meta.title, 60)}". Layout: Vertical 1080x1350px. Sections: 1) Header: HOMA Clinic + NEW RESEARCH. 2) Key Finding: "${meta.keyFinding.slice(0, 80)}..." r=${meta.rValue} p<${meta.pValue}. 3) Bar chart: 5 HbA1c bands. Colors: Green→Yellow→Blue→Orange→Red. 4) Sample: n=${meta.n} | ${meta.location}. 5) Footer: ${meta.journal} | ${meta.doi}. Style: Modern medical, clean. Fonts: Montserrat, Open Sans.`,
     midjourney: `/imagine a medical research infographic showing correlation between TyG index and HbA1c, modern minimalist design, bar charts in teal and coral, Indian patient data visualization, professional healthcare aesthetic, clean white background, medical icons, 16:9 --v 6 --style raw`,
-    dall-e: `Design a square social media graphic (1080x1080px) for a medical research publication. Show correlation between TyG index and HbA1c with r=${meta.rValue} prominently displayed. Title "TyG vs HbA1c: Indian Study", sample size n=${meta.n}, HOMA Clinic branding. Medical blue and white, modern professional style, suitable for LinkedIn/Instagram.`,
+    dallE: `Design a square social media graphic (1080x1080px) for a medical research publication. Show correlation between TyG index and HbA1c with r=${meta.rValue} prominently displayed. Title "TyG vs HbA1c: Indian Study", sample size n=${meta.n}, HOMA Clinic branding. Medical blue and white, modern professional style, suitable for LinkedIn/Instagram.`,
   };
 }
