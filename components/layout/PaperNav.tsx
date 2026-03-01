@@ -30,6 +30,21 @@ export function PaperNav() {
             ✅ Step 7: Quality
           </Link>
 
+          {/* Step 11: Content Amplification (remote) */}
+          <Link href="/step11" className="px-4 py-3 text-gray-600 hover:text-indigo-600 text-sm font-medium">
+            📢 Step 11
+          </Link>
+
+          {/* Step 12: Neutral Content (remote) */}
+          <Link href="/step12" className="px-4 py-3 text-gray-600 hover:text-indigo-600 text-sm font-medium">
+            📄 Step 12
+          </Link>
+
+          {/* Step 13: Collaboration Admin Panel (isolated) */}
+          <Link href="/step13" className="px-4 py-3 text-gray-600 hover:text-indigo-600 text-sm font-medium">
+            👥 Step 13: Admin
+          </Link>
+
           {/* Paper 2: Submitted – status only */}
           <Link href="/submitted" className="px-4 py-3 text-amber-600 hover:text-amber-700 text-sm font-medium">
             📤 Paper 2: Submitted

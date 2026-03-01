@@ -41,6 +41,15 @@ export function Header() {
               <Link href="/step7" className="text-gray-600 hover:text-indigo-600 font-medium">
                 Step 7: Quality
               </Link>
+              <Link href="/step11" className="text-gray-600 hover:text-indigo-600 font-medium">
+                Step 11
+              </Link>
+              <Link href="/step12" className="text-gray-600 hover:text-indigo-600 font-medium">
+                Step 12
+              </Link>
+              <Link href="/step13" className="text-gray-600 hover:text-indigo-600 font-medium">
+                Step 13: Admin
+              </Link>
             </nav>
 
             {/* 3-Paper Status Badges */}

@@ -29,6 +29,7 @@ import {
 } from "@/lib/utils/step12";
 import { generateHyperNaturalPrompt } from "./generators/video-prompts";
 import { generateMobileInfographicPrompt } from "./generators/mobile-infographic";
+import CollaborationTrackerCard from "./CollaborationTrackerCard";
 
 const TEXT_GENERATORS: Partial<
   Record<Step12TargetFormat, (text: string, title?: string) => string>
@@ -199,7 +200,9 @@ export default function ContentGenerator() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-4">
+      <CollaborationTrackerCard />
+
+      <div className="flex flex-wrap gap-4 mt-6">
         <Link href="/" className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-medium hover:bg-gray-300">
           ← Home
         </Link>
