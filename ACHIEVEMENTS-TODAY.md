@@ -2,6 +2,8 @@
 
 **TyG Index Research Dashboard – 3-Paper System**
 
+**Latest (Step 12):** (1) Facebook post generator: full structure (NEW RESEARCH ALERT, study highlights, key findings, clinical impact, who should watch, free resources, about, hashtags)—topic-agnostic, no invented n/r/p. (2) Handout generator: full patient-education layout (header, What is X, Why it matters, key facts, What you can do, When to see doctor, footer with phone & URL)—topic-agnostic. (3) FormatSelector: MCQ (3), Facebook, and icons for all formats; ContentGenerator handleGenerate comment documents mcq/youtube/whatsapp/facebook-post/handout wiring; don’t destroy success.
+
 **Today:** (1) ContentAmplificationInput-based generators added in `lib/utils`: `generateLectureSlides()` → Slide[], `generateTwitterThread()` → Tweet[] (with optional mediaUrl), `generateYouTubeShortsScript()` → VideoScript (60s scenes with timestamp, visual, textOverlay, voiceover). (2) Helpers: extractKeyTerm, getFormulaForTopic, getNormalRange, getElevatedThreshold, getHookQuestion, getFreeAlternative, formatStatResult—all topic-agnostic. (3) Don’t destroy success: existing Step 11 and research step-11 generators unchanged; new modules additive only.
 
 **Latest (Step 11):** (1) Step 11 Universal Content Amplification added: topic-agnostic template—user inputs topic name, key findings, audience, platform; outputs Twitter, YouTube, Blog, CME-style slides in same format. (2) No hardcoded medical terms; no changes to step-1–step-6; no patientData. (3) Additive only: new files under `components/step11` and `app/step11`; if Step 11 is disabled, Steps 1–6 remain fully functional.

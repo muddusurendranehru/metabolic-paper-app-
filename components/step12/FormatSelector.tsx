@@ -8,15 +8,20 @@
 import type { Step12TargetFormat } from "@/lib/utils/step12";
 
 const FORMATS: { id: Step12TargetFormat; label: string }[] = [
-  { id: "blog", label: "Blog" },
-  { id: "twitter", label: "Twitter" },
-  { id: "linkedin", label: "LinkedIn" },
-  { id: "handout", label: "Handout" },
-  { id: "youtube", label: "YouTube" },
-  { id: "faq", label: "FAQ" },
-  { id: "whatsapp", label: "WhatsApp" },
-  { id: "hypernatural", label: "HyperNatural (video)" },
-  { id: "infographic", label: "Infographic (mobile)" },
+  { id: "blog", label: "📝 Blog" },
+  { id: "twitter", label: "🐦 Twitter" },
+  { id: "linkedin", label: "💼 LinkedIn" },
+  { id: "handout", label: "📄 Handout" },
+  { id: "youtube", label: "🎥 YouTube" },
+  { id: "youtube-package", label: "🎥 YouTube (full pkg)" },
+  { id: "mcq", label: "🩺 MCQ (3)" },
+  { id: "whatsapp", label: "💬 WhatsApp" },
+  { id: "whatsapp-cta", label: "💬 WhatsApp CTA" },
+  { id: "facebook-post", label: "📘 Facebook" },
+  { id: "hypernatural", label: "🎬 HyperNatural (video)" },
+  { id: "infographic", label: "📊 Infographic (mobile)" },
+  { id: "book-section", label: "📚 Book section" },
+  { id: "seo-blog", label: "🔍 SEO Blog + Metadata" },
 ];
 
 interface FormatSelectorProps {

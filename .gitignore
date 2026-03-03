@@ -42,3 +42,6 @@ eng.traineddata
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Step 13 author submissions (PII – stored locally only by default)
+/data/

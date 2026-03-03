@@ -26,10 +26,15 @@ export type Step12TargetFormat =
   | "linkedin"
   | "handout"
   | "youtube"
-  | "faq"
+  | "youtube-package"
+  | "mcq"
   | "whatsapp"
+  | "whatsapp-cta"
+  | "facebook-post"
   | "hypernatural"
-  | "infographic";
+  | "infographic"
+  | "book-section"
+  | "seo-blog";
 
 export type Step12Audience = "patients" | "doctors" | "students" | "general";
 

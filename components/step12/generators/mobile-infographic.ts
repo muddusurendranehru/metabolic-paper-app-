@@ -1,3 +1,11 @@
+/*
+ * SAFETY GUARANTEE:
+ * - No imports from app/research/steps/step-1 to step-6
+ * - No access to patientData
+ * - No hardcoded medical terms (TyG, HbA1c, etc.) – all via input
+ * - Topic-agnostic: works for ANY medical topic
+ * - If Step 12 extensions are deleted, Steps 1-6 work 100%
+ */
 /**
  * Step 12 – mobile infographic prompt. Imports ONLY from @/lib/utils/step12.
  * Portrait 1080x1920 (9:16), mobile-first. Topic-agnostic.

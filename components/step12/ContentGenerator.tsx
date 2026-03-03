@@ -14,10 +14,20 @@ import FormatSelector from "./FormatSelector";
 import SourceTypeSelector from "./SourceTypeSelector";
 import AudienceToneSelectors from "./AudienceToneSelectors";
 import { generateBlog } from "./generators/blog";
+import {
+  generateBookSection,
+  type BookSectionSectionType,
+  type BookSectionDepthLevel,
+  type BookSectionCitationStyle,
+} from "./generators/book-section";
+import { generateSeoBlog, type SeoBlogMetaLength } from "./generators/seo-blog";
 import { generateSocial, generateTwitter, generateLinkedin, generateWhatsapp } from "./generators/social";
 import { generateHandout } from "./generators/handout";
 import { generateYoutube } from "./generators/youtube";
-import { generateFaq } from "./generators/faq";
+import { generateMcqGenerator } from "./generators/mcq-generator";
+import { generateYoutubePackage } from "./generators/youtube-package";
+import { generateWhatsappCta } from "./generators/whatsapp-cta";
+import { generateFacebookPost } from "./generators/facebook-post";
 import {
   formatStep12Label,
   DEFAULT_STEP12_INPUT,
@@ -39,18 +49,36 @@ const TEXT_GENERATORS: Partial<
   linkedin: generateLinkedin,
   handout: generateHandout,
   youtube: generateYoutube,
-  faq: generateFaq,
+  "youtube-package": generateYoutubePackage,
+  mcq: generateMcqGenerator,
   whatsapp: generateWhatsapp,
+  "whatsapp-cta": generateWhatsappCta,
+  "facebook-post": generateFacebookPost,
 };
 
 const FORMAT_LABELS: Partial<Record<Step12TargetFormat, string>> = {
   hypernatural: "HyperNatural (video)",
   infographic: "Infographic (mobile)",
+  "book-section": "📚 Book section",
+  "seo-blog": "🔍 SEO Blog + Metadata",
+  "youtube-package": "YouTube (full pkg)",
+  "whatsapp-cta": "WhatsApp CTA",
+  "facebook-post": "Facebook",
 };
 
 export default function ContentGenerator() {
   const [input, setInput] = useState<Step12Input>(DEFAULT_STEP12_INPUT);
   const [outputs, setOutputs] = useState<Record<Step12TargetFormat, string>>({} as Record<Step12TargetFormat, string>);
+  const [bookTitle, setBookTitle] = useState("");
+  const [sectionType, setSectionType] = useState<BookSectionSectionType>("chapter");
+  const [depthLevel, setDepthLevel] = useState<BookSectionDepthLevel>("moderate");
+  const [citationStyle, setCitationStyle] = useState<BookSectionCitationStyle>("vancouver");
+  const [includeKeyPoints, setIncludeKeyPoints] = useState(true);
+  const [targetKeyword, setTargetKeyword] = useState("");
+  const [metaLength, setMetaLength] = useState<SeoBlogMetaLength>("160");
+  const [includeSchema, setIncludeSchema] = useState(true);
+  const [includeOpenGraph, setIncludeOpenGraph] = useState(true);
+  const [includeTwitterCard, setIncludeTwitterCard] = useState(true);
 
   useEffect(() => {
     // Verify no patientData access
@@ -71,6 +99,9 @@ export default function ContentGenerator() {
   const handleGenerate = () => {
     const text = sourceText || input.topic || "(No content)";
     const title = input.topic || undefined;
+    // Pattern: for each selected format, call the right generator. Text-based formats use (text, title).
+    // mcq → generateMcqGenerator, youtube → generateYoutube, whatsapp → generateWhatsapp,
+    // facebook-post → generateFacebookPost, handout → generateHandout (all via TEXT_GENERATORS below).
     const inputWithDefaults: Step12Input & { websiteUrl?: string; clinic?: string } = {
       ...input,
       websiteUrl: STEP12_DEFAULT_WEBSITE_URL,
@@ -82,6 +113,26 @@ export default function ContentGenerator() {
         next[format] = generateHyperNaturalPrompt(inputWithDefaults);
       } else if (format === "infographic") {
         next[format] = generateMobileInfographicPrompt(inputWithDefaults);
+      } else if (format === "book-section") {
+        next[format] = generateBookSection(text, title, {
+          bookTitle,
+          sectionType,
+          depthLevel,
+          citationStyle,
+          includeKeyPoints,
+          audience: input.audience,
+          tone: input.tone,
+        });
+      } else if (format === "seo-blog") {
+        next[format] = generateSeoBlog(text, title, {
+          targetKeyword: targetKeyword.trim() || undefined,
+          metaDescriptionLength: metaLength,
+          includeSchema,
+          includeOpenGraph,
+          includeTwitterCard,
+          audience: input.audience,
+          tone: input.tone,
+        });
       } else {
         const fn = TEXT_GENERATORS[format];
         if (fn) next[format] = fn(text, title);
@@ -138,6 +189,116 @@ export default function ContentGenerator() {
           value={input.targetFormats}
           onChange={(targetFormats) => setInput((i) => ({ ...i, targetFormats }))}
         />
+
+        {input.targetFormats.includes("book-section") && (
+          <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+            <h4 className="font-semibold text-indigo-900 mb-3">Book Section Settings</h4>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Book Title</label>
+                <input
+                  type="text"
+                  value={bookTitle}
+                  onChange={(e) => setBookTitle(e.target.value)}
+                  placeholder="New Concepts in Diabetes"
+                  className="w-full p-2 border border-gray-300 rounded text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Section Type</label>
+                <select
+                  value={sectionType}
+                  onChange={(e) => setSectionType(e.target.value as BookSectionSectionType)}
+                  className="w-full p-2 border border-gray-300 rounded text-sm"
+                >
+                  <option value="chapter">Chapter (1500-2500 words)</option>
+                  <option value="sub-chapter">Sub-chapter (800-1200 words)</option>
+                  <option value="short">Short section (400-600 words)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Level of Depth</label>
+                <select
+                  value={depthLevel}
+                  onChange={(e) => setDepthLevel(e.target.value as BookSectionDepthLevel)}
+                  className="w-full p-2 border border-gray-300 rounded text-sm"
+                >
+                  <option value="introductory">Introductory (for students/patients)</option>
+                  <option value="moderate">Moderate (for clinicians)</option>
+                  <option value="advanced">Advanced (for specialists)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Citation Style</label>
+                <select
+                  value={citationStyle}
+                  onChange={(e) => setCitationStyle(e.target.value as BookSectionCitationStyle)}
+                  className="w-full p-2 border border-gray-300 rounded text-sm"
+                >
+                  <option value="vancouver">Vancouver (numbered)</option>
+                  <option value="narrative">Narrative (author-year, no numbering)</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="keyPoints"
+                checked={includeKeyPoints}
+                onChange={(e) => setIncludeKeyPoints(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="keyPoints" className="text-sm text-gray-700">
+                Include &quot;Key Points&quot; box (5 bullets)
+              </label>
+            </div>
+          </div>
+        )}
+
+        {input.targetFormats.includes("seo-blog") && (
+          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <h4 className="font-semibold text-green-900 mb-3">SEO Settings</h4>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Target Keyword</label>
+                <input
+                  type="text"
+                  value={targetKeyword}
+                  onChange={(e) => setTargetKeyword(e.target.value)}
+                  placeholder="e.g., TyG index diabetes India"
+                  className="w-full p-2 border border-gray-300 rounded text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Description Length</label>
+                <select
+                  value={metaLength}
+                  onChange={(e) => setMetaLength(e.target.value as SeoBlogMetaLength)}
+                  className="w-full p-2 border border-gray-300 rounded text-sm"
+                >
+                  <option value="150">~150 chars (Google snippet)</option>
+                  <option value="160">~160 chars (optimal)</option>
+                  <option value="300">~300 chars (social preview)</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="text-xs font-medium text-gray-600">Include:</span>
+              <label className="flex items-center gap-1 text-xs text-gray-700">
+                <input type="checkbox" checked={includeSchema} onChange={(e) => setIncludeSchema(e.target.checked)} className="rounded border-gray-300" />
+                Schema.org JSON-LD
+              </label>
+              <label className="flex items-center gap-1 text-xs text-gray-700">
+                <input type="checkbox" checked={includeOpenGraph} onChange={(e) => setIncludeOpenGraph(e.target.checked)} className="rounded border-gray-300" />
+                Open Graph tags
+              </label>
+              <label className="flex items-center gap-1 text-xs text-gray-700">
+                <input type="checkbox" checked={includeTwitterCard} onChange={(e) => setIncludeTwitterCard(e.target.checked)} className="rounded border-gray-300" />
+                Twitter Card
+              </label>
+            </div>
+          </div>
+        )}
 
         <AudienceToneSelectors
           audience={input.audience}

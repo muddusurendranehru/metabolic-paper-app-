@@ -16,3 +16,19 @@ export type {
 } from "./step12-types";
 export { extractPlainText, extractSnippet } from "./text-extractor";
 export { formatSection, formatBullets, formatDocument } from "./content-formatter";
+export {
+  buildMetaBlock,
+  deriveSeoMeta,
+  buildSchemaOrgArticle,
+  buildOpenGraphTags,
+  buildTwitterCardTags,
+  generateSlug,
+  type SeoMeta,
+} from "./seo-utils";
+export {
+  formatBookSection,
+  formatAcademicContent,
+  type BookSectionInput,
+  type AcademicHeading,
+  type FormatAcademicContentInput,
+} from "./book-formatter";

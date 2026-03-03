@@ -5,7 +5,25 @@
  * No patientData; no shared state with steps 1–11.
  */
 
-import type { NeutralContentInput, Step12Input } from "./step12-types";
+import type { NeutralContentInput, Step12Input, Step12TargetFormat } from "./step12-types";
+
+/** All Step 12 target format options (Book section + SEO Blog included). */
+export const STEP12_TARGET_FORMATS: Step12TargetFormat[] = [
+  "blog",
+  "twitter",
+  "linkedin",
+  "handout",
+  "youtube",
+  "youtube-package",
+  "mcq",
+  "whatsapp",
+  "whatsapp-cta",
+  "facebook-post",
+  "hypernatural",
+  "infographic",
+  "book-section",
+  "seo-blog",
+];
 
 export interface Step12State {
   note: string;

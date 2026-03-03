@@ -7,7 +7,11 @@
 import { useState } from "react";
 import { validateAuthorSubmission } from "@/lib/utils/admin/author-schema";
 
-export default function CollaborationForm() {
+interface CollaborationFormProps {
+  onSaved?: () => void;
+}
+
+export default function CollaborationForm({ onSaved }: CollaborationFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [specialty, setSpecialty] = useState("");
@@ -20,7 +24,7 @@ export default function CollaborationForm() {
   const [consent, setConsent] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
     const result = validateAuthorSubmission({
@@ -40,7 +44,22 @@ export default function CollaborationForm() {
       setMessage({ type: "error", text: result.error });
       return;
     }
-    setMessage({ type: "ok", text: "Validation passed. In production, submit to your backend or Google Form." });
+    try {
+      const res = await fetch("/api/collaboration/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(result.data),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage({ type: "error", text: (data.error as string) || "Failed to save." });
+        return;
+      }
+      setMessage({ type: "ok", text: "Saved. Your submission is stored locally." });
+      onSaved?.();
+    } catch {
+      setMessage({ type: "error", text: "Network error. Try again." });
+    }
   };
 
   return (

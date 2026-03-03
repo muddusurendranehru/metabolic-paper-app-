@@ -1,3 +1,11 @@
+/*
+ * SAFETY GUARANTEE:
+ * - No imports from app/research/steps/step-1 to step-6
+ * - No access to patientData
+ * - No hardcoded medical terms (TyG, HbA1c, etc.) – all via input
+ * - Topic-agnostic: works for ANY medical topic
+ * - If Step 12 extensions are deleted, Steps 1-6 work 100%
+ */
 /**
  * Step 12 – multi-format content generator. Imports ONLY from @/lib/utils/step12 and local generators.
  * Topic-agnostic: NO hardcoded TyG/HbA1c/Waist, NO research metrics, NO patient data.
@@ -14,7 +22,7 @@ import {
 } from "@/lib/utils/step12";
 import { generateBlog } from "./blog";
 import { generateHandout } from "./handout";
-import { generateFaq } from "./faq";
+import { generateMcqGenerator } from "./mcq-generator";
 
 /** Output of generateAllFormats – one entry per required format. */
 export interface Step12AllFormats {
@@ -24,7 +32,7 @@ export interface Step12AllFormats {
   handout: string;
   youtubeScript: string;
   youtubeAIPrompt: string;
-  faq: string;
+  mcq: string;
   whatsapp: string;
 }
 
@@ -108,9 +116,9 @@ function toYoutubeAIPrompt(sourceText: string, title?: string): string {
   return intro + formatBullets(scenes);
 }
 
-/** FAQ: 5–10 Q&A pairs from source lines. */
-function toFaq(sourceText: string, title?: string): string {
-  return generateFaq(sourceText, title);
+/** MCQ: 3 multiple choice questions from source + topic. */
+function toMcq(sourceText: string, title?: string): string {
+  return generateMcqGenerator(sourceText, title);
 }
 
 /** WhatsApp: 160 chars. */
@@ -134,7 +142,7 @@ export function generateAllFormats(input: Step12Input): Step12AllFormats {
     handout: toHandout(sourceText, title),
     youtubeScript: toYoutubeScript(sourceText, title),
     youtubeAIPrompt: toYoutubeAIPrompt(sourceText, title),
-    faq: toFaq(sourceText, title),
+    mcq: toMcq(sourceText, title),
     whatsapp: toWhatsapp(sourceText),
   };
 }
