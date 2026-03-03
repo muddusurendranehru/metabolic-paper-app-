@@ -44,6 +44,7 @@ export function generateCollaborationEmail(input: CollaborationEmailInput): stri
     sampleSize,
     keyFinding,
     journalTarget,
+    studyLocation,
     packageType,
     packagePrice,
     timelineReview,

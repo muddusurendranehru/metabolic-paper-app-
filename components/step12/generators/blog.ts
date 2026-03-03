@@ -9,7 +9,7 @@
 /**
  * Step 12 – blog content generator (single blog with SEO metadata).
  * Imports from @/lib/utils/step12 and components/step12/utils. Topic-agnostic; no patientData.
- * Uses getTranslation for section labels; injectWebsiteLink for footer.
+ * When source is topic-only (short text), uses universal content so sections have real content instead of repeated title.
  */
 
 import {
@@ -18,10 +18,16 @@ import {
   formatSection,
   formatDocument,
   getWebsiteLinkLine,
+  generateUniversalContent,
+  generateBlogWithKnowledgeBase,
   type Step12Language,
+  type Step12Audience,
+  type Step12Tone,
 } from "@/lib/utils/step12";
 import { getTranslation } from "../utils/translations";
 import { injectWebsiteLink } from "../utils/website-injectors";
+
+const TOPIC_ONLY_THRESHOLD = 200;
 
 /** Build SEO metadata block (title, description, keywords) for the same blog content. */
 function buildSeoBlock(title: string, summary: string): string {
@@ -39,12 +45,48 @@ function buildSeoBlock(title: string, summary: string): string {
   ].join("\n");
 }
 
-export function generateBlog(sourceText: string, title?: string, language?: Step12Language): string {
+export interface GenerateBlogOptions {
+  audience?: Step12Audience;
+  tone?: Step12Tone;
+}
+
+export function generateBlog(
+  sourceText: string,
+  title?: string,
+  language?: Step12Language,
+  options?: GenerateBlogOptions
+): string {
   const lang = language ?? "en";
-  const t = (key: string) => getTranslation(lang, key);
   const text = extractPlainText(sourceText);
+  const sectionTitle = (title ?? text) || "Summary";
+
+  // When source is only a short topic (e.g. batch "one per line" or from-scratch), use knowledge-base
+  // content when topic matches; fallback to universal template so we never break output.
+  if (text.length < TOPIC_ONLY_THRESHOLD) {
+    let body: string;
+    try {
+      body = generateBlogWithKnowledgeBase({
+        topic: sectionTitle,
+        language: lang,
+        audience: options?.audience ?? "general",
+      });
+    } catch {
+      body = generateUniversalContent({
+        topic: sectionTitle,
+        sourceText: text || undefined,
+        language: lang,
+        contentType: "blog",
+        audience: options?.audience ?? "general",
+        tone: options?.tone ?? "professional",
+      });
+    }
+    const summary = extractSnippet(body, 160);
+    const seoBlock = buildSeoBlock(sectionTitle, summary);
+    return seoBlock + "\n\n" + body;
+  }
+
+  const t = (key: string) => getTranslation(lang, key);
   const summary = extractSnippet(text, 160);
-  const sectionTitle = title ?? "Summary";
   const seoBlock = buildSeoBlock(sectionTitle, summary);
   const linkLine = getWebsiteLinkLine({ language: lang, format: "plain" });
 

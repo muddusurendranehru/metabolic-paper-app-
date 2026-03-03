@@ -35,6 +35,7 @@ import {
   STEP12_DEFAULT_WEBSITE_URL,
   STEP12_DEFAULT_CLINIC,
   STEP12_LANGUAGES,
+  parseNutritionBotText,
   type Step12Input,
   type Step12TargetFormat,
   type Step12Language,
@@ -84,6 +85,132 @@ export default function ContentGenerator() {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [translateError, setTranslateError] = useState<string | null>(null);
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchTopics, setBatchTopics] = useState("");
+  const [batchResult, setBatchResult] = useState("");
+  const [batchRunning, setBatchRunning] = useState(false);
+  // Nutrition Bot + Step 12 workflow (separate option; does not change main flow)
+  const [nbTopic, setNbTopic] = useState("");
+  const [nbJson, setNbJson] = useState("");
+  const [nbLang, setNbLang] = useState<Step12Language>("en");
+  const [nbOutput, setNbOutput] = useState<{ blog?: string; twitter?: string; handout?: string } | null>(null);
+  const [nbLoading, setNbLoading] = useState(false);
+  const [nbError, setNbError] = useState<string | null>(null);
+  const [nbActiveTab, setNbActiveTab] = useState<"blog" | "twitter" | "handout">("blog");
+  // Batch (Nutrition Bot API + fallback) – separate from single JSON paste
+  const [nbBatchTopics, setNbBatchTopics] = useState("");
+  const [nbBatchResult, setNbBatchResult] = useState<string | null>(null);
+  const [nbBatchRunning, setNbBatchRunning] = useState(false);
+  const [nbBatchError, setNbBatchError] = useState<string | null>(null);
+  const [useNutritionBot, setUseNutritionBot] = useState(true);
+  // Batch CSV upload + results table
+  const [nbBatchCsvFile, setNbBatchCsvFile] = useState<File | null>(null);
+  const [nbBatchTableResults, setNbBatchTableResults] = useState<
+    Array<{
+      topic: string;
+      language?: string;
+      audience?: string;
+      formats?: string[];
+      blog?: string;
+      twitter?: string;
+      handout?: string;
+      source?: "nutrition-bot" | "local";
+      posted?: boolean;
+    }>
+  >([]);
+
+  const runNutritionBotWorkflow = async () => {
+    setNbError(null);
+    setNbOutput(null);
+    const topic = nbTopic.trim();
+    if (!topic) {
+      setNbError("Topic is required");
+      return;
+    }
+    let data: unknown;
+    const trimmed = nbJson.trim();
+    if (!trimmed) {
+      setNbError("Paste Nutrition Bot JSON or plain text (e.g. calories, GI, fiber, verdict).");
+      return;
+    }
+    try {
+      data = JSON.parse(trimmed);
+    } catch {
+      const parsed = parseNutritionBotText(trimmed);
+      data = parsed ?? null;
+    }
+    if (!data || typeof data !== "object") {
+      setNbError("Could not parse as JSON or Nutrition Bot text. Paste JSON or text with calories, verdict, etc.");
+      return;
+    }
+    setNbLoading(true);
+    try {
+      const res = await fetch("/api/step12/from-nutrition-bot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic, nutritionData: data, language: nbLang, formats: ["blog", "twitter", "handout"] }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setNbError(result?.error || "Request failed");
+        return;
+      }
+      setNbOutput(result);
+    } catch (e) {
+      setNbError("Request failed. Check network and try again.");
+    } finally {
+      setNbLoading(false);
+    }
+  };
+
+  const runNutritionBotBatch = async () => {
+    setNbBatchError(null);
+    setNbBatchResult(null);
+    const lines = nbBatchTopics
+      .split(/[\r\n,]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (lines.length === 0) {
+      setNbBatchError("Enter at least one topic (one per line or comma-separated).");
+      return;
+    }
+    setNbBatchRunning(true);
+    try {
+      const res = await fetch("/api/step12/batch-nutrition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topics: lines,
+          language: nbLang,
+          formats: ["blog", "twitter", "handout"],
+          useNutritionBot,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setNbBatchError(data?.error || "Batch request failed");
+        return;
+      }
+      const results = data.results as Array<{ topic: string; blog?: string; twitter?: string; handout?: string }>;
+      if (!Array.isArray(results)) {
+        setNbBatchError("Invalid batch response");
+        return;
+      }
+      const parts: string[] = [];
+      for (const r of results) {
+        parts.push(`========== ${r.topic} ==========`);
+        if (r.blog) parts.push(`\n--- Blog ---\n${r.blog}`);
+        if (r.twitter) parts.push(`\n--- Twitter ---\n${r.twitter}`);
+        if (r.handout) parts.push(`\n--- Handout ---\n${r.handout}`);
+        parts.push("");
+      }
+      setNbBatchResult(parts.join("\n"));
+    } catch {
+      setNbBatchError("Network error. Try again.");
+    } finally {
+      setNbBatchRunning(false);
+    }
+  };
 
   const copyWebsiteUrl = () => {
     navigator.clipboard?.writeText(STEP12_DEFAULT_WEBSITE_URL).then(
@@ -146,6 +273,31 @@ export default function ContentGenerator() {
           audience: input.audience,
           tone: input.tone,
         });
+      } else if (format === "blog") {
+        const topicOnly = text.length < 200;
+        if (topicOnly) {
+          try {
+            const res = await fetch("/api/step12/generate-blog", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                topic: title || text,
+                audience: input.audience,
+                language: input.language ?? "en",
+              }),
+            });
+            const data = await res.json();
+            if (res.ok && typeof data.content === "string") {
+              next[format] = data.content;
+            } else {
+              next[format] = generateBlog(text, title, input.language, { audience: input.audience, tone: input.tone });
+            }
+          } catch {
+            next[format] = generateBlog(text, title, input.language, { audience: input.audience, tone: input.tone });
+          }
+        } else {
+          next[format] = generateBlog(text, title, input.language, { audience: input.audience, tone: input.tone });
+        }
       } else {
         const fn = TEXT_GENERATORS[format];
         if (fn) next[format] = fn(text, title, input.language);
@@ -190,11 +342,246 @@ export default function ContentGenerator() {
     }
   };
 
+  const buildOutputsForTopic = (text: string, title: string): Record<Step12TargetFormat, string> => {
+    const inputWithDefaults: Step12Input & { websiteUrl?: string; clinic?: string } = {
+      ...input,
+      topic: title,
+      websiteUrl: STEP12_DEFAULT_WEBSITE_URL,
+      clinic: STEP12_DEFAULT_CLINIC,
+    };
+    const next: Record<Step12TargetFormat, string> = {} as Record<Step12TargetFormat, string>;
+    for (const format of input.targetFormats) {
+      if (format === "hypernatural") {
+        next[format] = generateHyperNaturalPrompt(inputWithDefaults);
+      } else if (format === "infographic") {
+        next[format] = generateMobileInfographicPrompt(inputWithDefaults);
+      } else if (format === "book-section") {
+        next[format] = generateBookSection(text, title, {
+          bookTitle,
+          sectionType,
+          depthLevel,
+          citationStyle,
+          includeKeyPoints,
+          audience: input.audience,
+          tone: input.tone,
+        });
+      } else if (format === "seo-blog") {
+        next[format] = generateSeoBlog(text, title, {
+          targetKeyword: targetKeyword.trim() || undefined,
+          metaDescriptionLength: metaLength,
+          includeSchema,
+          includeOpenGraph,
+          includeTwitterCard,
+          audience: input.audience,
+          tone: input.tone,
+        });
+      } else if (format === "blog") {
+        next[format] = generateBlog(text, title, input.language, { audience: input.audience, tone: input.tone });
+      } else {
+        const fn = TEXT_GENERATORS[format];
+        if (fn) next[format] = fn(text, title, input.language);
+      }
+    }
+    return next;
+  };
+
+  const handleBatchGenerate = async () => {
+    const lines = batchTopics
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (lines.length === 0) {
+      setTranslateError("Enter at least one topic (one per line).");
+      return;
+    }
+    setTranslateError(null);
+    setBatchRunning(true);
+    setBatchResult("");
+    const lang = input.language ?? "en";
+    const parts: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const topic = lines[i];
+      const text = extractPlainText(topic);
+      const title = topic;
+      const fallbackNext = buildOutputsForTopic(text, title);
+      let next: Record<Step12TargetFormat, string> = {} as Record<Step12TargetFormat, string>;
+      for (const format of input.targetFormats) {
+        if (format === "blog") {
+          try {
+            const res = await fetch("/api/step12/generate-blog", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ topic: title, audience: input.audience, language: lang }),
+            });
+            const data = await res.json();
+            if (res.ok && typeof data.content === "string") next[format] = data.content;
+            else next[format] = fallbackNext[format];
+          } catch {
+            next[format] = fallbackNext[format];
+          }
+        } else {
+          next[format] = fallbackNext[format];
+        }
+      }
+      if (lang !== "en") {
+        const translated: Record<Step12TargetFormat, string> = { ...next };
+        for (const format of input.targetFormats) {
+          const content = next[format];
+          if (!content) continue;
+          try {
+            const res = await fetch("/api/translate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text: content, targetLanguage: lang }),
+            });
+            const data = await res.json();
+            if (res.ok && typeof data.translated === "string") translated[format] = data.translated;
+          } catch {
+            // keep original
+          }
+        }
+        next = translated;
+      }
+      parts.push(`========== Topic: ${topic} ==========`);
+      for (const format of input.targetFormats) {
+        const out = next[format];
+        if (out) parts.push(`\n--- ${FORMAT_LABELS[format] ?? format} ---\n${out}`);
+      }
+      parts.push("");
+    }
+    setBatchResult(parts.join("\n"));
+    setBatchRunning(false);
+  };
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-indigo-900 mb-2">{formatStep12Label()}</h1>
         <p className="text-gray-600 text-sm">Topic-agnostic. No research data. Choose source, formats, audience, tone.</p>
+      </div>
+
+      {/* Nutrition Bot + Step 12 – separate workflow; does not affect main generator */}
+      <div className="mb-8 rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-4 shadow-sm">
+        <h2 className="text-lg font-semibold text-emerald-900 mb-1">Nutrition Bot + Step 12 Workflow</h2>
+        <p className="text-sm text-emerald-800/90 mb-4">
+          Paste Nutrition Bot JSON (ghee, papaya, brown poha, etc.) + topic → get Blog, Twitter, Handout with link auto-injected.
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Topic</label>
+            <input
+              value={nbTopic}
+              onChange={(e) => setNbTopic(e.target.value)}
+              placeholder="e.g. Ghee and Diabetes"
+              className="w-full p-2 border border-gray-300 rounded text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nutrition Bot JSON or plain text</label>
+            <textarea
+              value={nbJson}
+              onChange={(e) => setNbJson(e.target.value)}
+              placeholder='JSON: {"foodName":"Ghee","calories":112,...} or paste plain text (Calories: 210, SAFE FOR DIABETES, etc.)'
+              className="w-full p-2 border border-gray-300 rounded text-sm font-mono min-h-[100px]"
+              rows={4}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-gray-700">Language:</span>
+            {(["en", "hi", "te", "ta"] as const).map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setNbLang(l)}
+                className={`px-3 py-1.5 rounded border text-sm ${nbLang === l ? "bg-emerald-600 text-white border-emerald-600" : "bg-white border-gray-300 text-gray-700"}`}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={runNutritionBotWorkflow}
+              disabled={nbLoading}
+              className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium text-sm disabled:opacity-50"
+            >
+              {nbLoading ? "Generating…" : "Generate content"}
+            </button>
+          </div>
+          {nbError && <p className="text-sm text-red-600">{nbError}</p>}
+          {nbOutput && (
+            <div className="mt-3 border border-emerald-200 rounded-lg bg-white p-3">
+              <div className="flex gap-2 mb-2 border-b border-gray-200">
+                {nbOutput.blog && <button type="button" onClick={() => setNbActiveTab("blog")} className={`px-3 py-1.5 text-sm rounded ${nbActiveTab === "blog" ? "bg-emerald-100 font-medium" : ""}`}>Blog</button>}
+                {nbOutput.twitter && <button type="button" onClick={() => setNbActiveTab("twitter")} className={`px-3 py-1.5 text-sm rounded ${nbActiveTab === "twitter" ? "bg-emerald-100 font-medium" : ""}`}>Twitter</button>}
+                {nbOutput.handout && <button type="button" onClick={() => setNbActiveTab("handout")} className={`px-3 py-1.5 text-sm rounded ${nbActiveTab === "handout" ? "bg-emerald-100 font-medium" : ""}`}>Handout</button>}
+              </div>
+              <pre className="text-xs overflow-auto max-h-[320px] p-2 bg-gray-50 rounded whitespace-pre-wrap font-sans">
+                {nbActiveTab === "blog" && nbOutput.blog}
+                {nbActiveTab === "twitter" && nbOutput.twitter}
+                {nbActiveTab === "handout" && nbOutput.handout}
+              </pre>
+              <button
+                type="button"
+                onClick={() => {
+                  const text = nbOutput[nbActiveTab];
+                  if (text) navigator.clipboard?.writeText(text);
+                }}
+                className="mt-2 text-sm text-emerald-700 hover:underline"
+              >
+                Copy to clipboard
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Batch: Nutrition Bot API + fallback (CSV / one per line) */}
+        <div className="mt-6 pt-4 border-t border-emerald-200">
+          <h3 className="text-sm font-semibold text-emerald-900 mb-2">Batch content (Nutrition Bot API + fallback)</h3>
+          <p className="text-xs text-emerald-800/90 mb-2">
+            One topic per line (e.g. ghee diabetes, papaya diabetes). Calls Nutrition Bot API; on failure uses local food-facts. Link auto-injected.
+          </p>
+          <textarea
+            value={nbBatchTopics}
+            onChange={(e) => setNbBatchTopics(e.target.value)}
+            placeholder={"ghee diabetes\npapaya diabetes\nbrown poha diabetes"}
+            className="w-full p-2 border border-gray-300 rounded text-sm min-h-[80px]"
+            rows={3}
+          />
+          <div className="flex items-center gap-3 mt-2">
+            <button
+              type="button"
+              onClick={() => void runNutritionBotBatch()}
+              disabled={nbBatchRunning}
+              className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium text-sm disabled:opacity-50"
+            >
+              {nbBatchRunning ? "Generating batch…" : "Generate batch"}
+            </button>
+            {nbBatchError && <span className="text-sm text-red-600">{nbBatchError}</span>}
+          </div>
+          {nbBatchResult && (
+            <div className="mt-3 flex flex-col gap-2">
+              <div className="flex gap-2">
+                <a
+                  href={`data:text/plain;charset=utf-8,${encodeURIComponent(nbBatchResult)}`}
+                  download={`step12-nutrition-batch-${new Date().toISOString().slice(0, 10)}.txt`}
+                  className="text-sm text-emerald-700 hover:underline"
+                >
+                  Download batch
+                </a>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard?.writeText(nbBatchResult)}
+                  className="text-sm text-emerald-700 hover:underline"
+                >
+                  Copy all
+                </button>
+              </div>
+              <pre className="text-xs overflow-auto max-h-[240px] p-2 bg-white border border-emerald-200 rounded whitespace-pre-wrap">
+                {nbBatchResult}
+              </pre>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="space-y-4 mb-6">
@@ -378,6 +765,38 @@ export default function ContentGenerator() {
           </div>
         )}
 
+        <div className="bg-white rounded-lg shadow p-4 border border-gray-200">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+            <input
+              type="checkbox"
+              checked={batchMode}
+              onChange={(e) => setBatchMode(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Batch mode (multiple topics)
+          </label>
+          {batchMode && (
+            <div className="mt-3 space-y-2">
+              <label className="block text-xs font-medium text-gray-600">Batch topics (one per line, e.g. for 30-day content)</label>
+              <textarea
+                value={batchTopics}
+                onChange={(e) => setBatchTopics(e.target.value)}
+                placeholder={"Role of Ghee in Diabetes\nTyG Index and heart health\nFasting glucose tips"}
+                className="w-full p-2 border border-gray-300 rounded text-sm min-h-[100px]"
+                rows={4}
+              />
+              <button
+                type="button"
+                onClick={() => void handleBatchGenerate()}
+                disabled={batchRunning || input.targetFormats.length === 0}
+                className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {batchRunning ? "Generating batch…" : "Generate batch"}
+              </button>
+            </div>
+          )}
+        </div>
+
         <AudienceToneSelectors
           audience={input.audience}
           tone={input.tone}
@@ -442,6 +861,43 @@ export default function ContentGenerator() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {batchResult && (
+        <div className="space-y-4 mb-6">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <h2 className="text-xl font-bold text-indigo-900">Batch results</h2>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const blob = new Blob([batchResult], { type: "text/plain;charset=utf-8" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `step12-batch-${new Date().toISOString().slice(0, 10)}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="px-3 py-1.5 rounded text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  Download batch
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard?.writeText(batchResult)}
+                  className="px-3 py-1.5 rounded text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  Copy all
+                </button>
+              </div>
+            </div>
+            <pre className="p-4 bg-gray-50 rounded border text-sm whitespace-pre-wrap font-sans max-h-[500px] overflow-y-auto">
+              {batchResult}
+            </pre>
+          </div>
         </div>
       )}
 

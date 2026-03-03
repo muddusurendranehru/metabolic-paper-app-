@@ -87,8 +87,8 @@ export function toLegacyTopicInput(content: Partial<ContentAmplificationInput>):
     effectSize: sr?.confidenceInterval ?? "",
     targetAudience: aud === "mixed" ? "doctors" : aud,
     platformFocus: platformFocus === "Mcq" ? "Blog" : platformFocus,
-    authorName: content.authorName ?? DEFAULT_CONTENT_AMPLIFICATION_INPUT.authorName,
-    clinicName: content.clinicName ?? DEFAULT_CONTENT_AMPLIFICATION_INPUT.clinicName,
+    authorName: content.authorName ?? DEFAULT_CONTENT_AMPLIFICATION_INPUT.authorName ?? "",
+    clinicName: content.clinicName ?? DEFAULT_CONTENT_AMPLIFICATION_INPUT.clinicName ?? "",
     location: (content.clinicName ?? "").split(",").map((s) => s.trim()).filter(Boolean)[1] ?? "Hyderabad",
     journalOrSource: content.clinicalArea ? `${content.clinicalArea} (n=${content.sampleSize ?? ""})` : "",
   };

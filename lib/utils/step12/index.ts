@@ -39,6 +39,41 @@ export {
   generateBlogPost,
   type BlogPostInput,
 } from "./blog-with-translate";
+export {
+  generateBlogWithKnowledgeBase,
+  type BlogKnowledgeInput,
+} from "./blog-knowledge-content";
+export {
+  checkGuidelines,
+  type GuidelineQuery,
+  type GuidelineResult,
+} from "./guideline-checker";
+export {
+  getFoodFacts,
+  isFoodTopic,
+  extractFoodName,
+  type FoodFactResult,
+} from "./food-facts";
+export {
+  buildContentFromNutritionData,
+  normalizeNutritionBotJson,
+  type NutritionBotContentInput,
+  type NutritionBotContentOutput,
+  type NutritionBotLanguage,
+} from "./nutrition-bot-content";
+export {
+  fetchNutritionData,
+  getNutritionForTopicWithFallback,
+  type NutritionBotResponse,
+} from "./nutrition-bot-client";
+export {
+  parseNutritionBotText,
+  type ParsedNutritionData,
+} from "./nutrition-text-parser";
+export {
+  generateNaturalContent,
+  type NaturalContentInput,
+} from "./natural-content-generator";
 export type {
   NeutralContentInput,
   NeutralContentOutput,
