@@ -12,7 +12,7 @@
  */
 
 import type { Step12Input, Step12Audience } from "@/lib/utils/step12";
-import { STEP12_DEFAULT_CLINIC } from "@/lib/utils/step12";
+import { STEP12_DEFAULT_CLINIC, STEP12_CONSTANTS } from "@/lib/utils/step12";
 
 type LetterInput = Step12Input & {
   journal?: string;
@@ -117,6 +117,7 @@ ${clinic}
 ${fullLocation}
 Email: ${email}
 Phone: ${phone}
+${STEP12_CONSTANTS.WEBSITE_LABEL}: ${STEP12_CONSTANTS.WEBSITE_URL}
 
 Conflict of Interest: None declared
 Funding: No external funding

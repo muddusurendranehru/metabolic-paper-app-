@@ -40,6 +40,9 @@ export type Step12Audience = "patients" | "doctors" | "students" | "general";
 
 export type Step12Tone = "professional" | "friendly" | "educational" | "urgent";
 
+/** Supported UI and label languages for Step 12 generated content (universal, any topic). */
+export type Step12Language = "en" | "hi" | "te" | "ta" | "kn" | "ml" | "bn" | "mr";
+
 export interface Step12Input {
   topic: string;
   sourceType: Step12SourceType;
@@ -48,4 +51,6 @@ export interface Step12Input {
   targetFormats: Step12TargetFormat[];
   audience: Step12Audience;
   tone: Step12Tone;
+  /** Language for labels/CTAs in generated content. Default: en. */
+  language?: Step12Language;
 }

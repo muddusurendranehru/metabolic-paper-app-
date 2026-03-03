@@ -8,11 +8,20 @@
  */
 /**
  * Step 12 – blog content generator (single blog with SEO metadata).
- * Imports ONLY from @/lib/utils/step12. Topic-agnostic; no patientData.
+ * Imports from @/lib/utils/step12 and components/step12/utils. Topic-agnostic; no patientData.
+ * Uses getTranslation for section labels; injectWebsiteLink for footer.
  */
 
-import { extractPlainText, extractSnippet } from "@/lib/utils/step12";
-import { formatSection, formatDocument } from "@/lib/utils/step12";
+import {
+  extractPlainText,
+  extractSnippet,
+  formatSection,
+  formatDocument,
+  getWebsiteLinkLine,
+  type Step12Language,
+} from "@/lib/utils/step12";
+import { getTranslation } from "../utils/translations";
+import { injectWebsiteLink } from "../utils/website-injectors";
 
 /** Build SEO metadata block (title, description, keywords) for the same blog content. */
 function buildSeoBlock(title: string, summary: string): string {
@@ -30,15 +39,27 @@ function buildSeoBlock(title: string, summary: string): string {
   ].join("\n");
 }
 
-export function generateBlog(sourceText: string, title?: string): string {
+export function generateBlog(sourceText: string, title?: string, language?: Step12Language): string {
+  const lang = language ?? "en";
+  const t = (key: string) => getTranslation(lang, key);
   const text = extractPlainText(sourceText);
   const summary = extractSnippet(text, 160);
   const sectionTitle = title ?? "Summary";
   const seoBlock = buildSeoBlock(sectionTitle, summary);
+  const linkLine = getWebsiteLinkLine({ language: lang, format: "plain" });
+
   const sections = [
     formatSection(sectionTitle, summary),
-    formatSection("Details", text || "(No content)"),
+    formatSection(t("introduction"), extractSnippet(text, 300) || summary || "(No content)"),
+    formatSection(t("methods"), extractSnippet(text, 250) || "(No content)"),
+    formatSection(t("results"), extractSnippet(text, 250) || "(No content)"),
+    formatSection(t("keyFindings"), extractSnippet(text, 400) || "(No content)"),
+    formatSection(t("discussion"), extractSnippet(text, 300) || "(No content)"),
+    formatSection(t("conclusion"), extractSnippet(text, 200) || "(No content)"),
+    formatSection(t("learnMore"), linkLine),
   ];
   const body = formatDocument(sections);
-  return seoBlock + "\n\n" + body;
+  const content = seoBlock + "\n\n" + body;
+
+  return injectWebsiteLink(content, lang);
 }

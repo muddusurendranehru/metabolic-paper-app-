@@ -34,15 +34,17 @@ import {
   extractPlainText,
   STEP12_DEFAULT_WEBSITE_URL,
   STEP12_DEFAULT_CLINIC,
+  STEP12_LANGUAGES,
   type Step12Input,
   type Step12TargetFormat,
+  type Step12Language,
 } from "@/lib/utils/step12";
 import { generateHyperNaturalPrompt } from "./generators/video-prompts";
 import { generateMobileInfographicPrompt } from "./generators/mobile-infographic";
 import CollaborationTrackerCard from "./CollaborationTrackerCard";
 
 const TEXT_GENERATORS: Partial<
-  Record<Step12TargetFormat, (text: string, title?: string) => string>
+  Record<Step12TargetFormat, (text: string, title?: string, language?: Step12Language) => string>
 > = {
   blog: generateBlog,
   twitter: generateTwitter,
@@ -79,6 +81,19 @@ export default function ContentGenerator() {
   const [includeSchema, setIncludeSchema] = useState(true);
   const [includeOpenGraph, setIncludeOpenGraph] = useState(true);
   const [includeTwitterCard, setIncludeTwitterCard] = useState(true);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translateError, setTranslateError] = useState<string | null>(null);
+
+  const copyWebsiteUrl = () => {
+    navigator.clipboard?.writeText(STEP12_DEFAULT_WEBSITE_URL).then(
+      () => {
+        setCopiedUrl(true);
+        setTimeout(() => setCopiedUrl(false), 2000);
+      },
+      () => {}
+    );
+  };
 
   useEffect(() => {
     // Verify no patientData access
@@ -96,12 +111,10 @@ export default function ContentGenerator() {
     return input.pastedText ?? ""; // upload path: parent sets pastedText from file
   })();
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    setTranslateError(null);
     const text = sourceText || input.topic || "(No content)";
     const title = input.topic || undefined;
-    // Pattern: for each selected format, call the right generator. Text-based formats use (text, title).
-    // mcq → generateMcqGenerator, youtube → generateYoutube, whatsapp → generateWhatsapp,
-    // facebook-post → generateFacebookPost, handout → generateHandout (all via TEXT_GENERATORS below).
     const inputWithDefaults: Step12Input & { websiteUrl?: string; clinic?: string } = {
       ...input,
       websiteUrl: STEP12_DEFAULT_WEBSITE_URL,
@@ -135,10 +148,46 @@ export default function ContentGenerator() {
         });
       } else {
         const fn = TEXT_GENERATORS[format];
-        if (fn) next[format] = fn(text, title);
+        if (fn) next[format] = fn(text, title, input.language);
       }
     }
-    setOutputs(next);
+
+    const lang = input.language ?? "en";
+    if (lang !== "en") {
+      setIsTranslating(true);
+      try {
+        const translated: Record<Step12TargetFormat, string> = { ...next };
+        let apiError: string | null = null;
+        for (const format of input.targetFormats) {
+          const content = next[format];
+          if (!content) continue;
+          try {
+            const res = await fetch("/api/translate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text: content, targetLanguage: lang }),
+            });
+            const data = await res.json();
+            if (res.ok && typeof data.translated === "string") {
+              translated[format] = data.translated;
+            } else if (!res.ok && typeof data.error === "string") {
+              apiError = data.error;
+            }
+          } catch {
+            // Keep original content for this format on failure
+          }
+        }
+        if (apiError) setTranslateError(apiError);
+        setOutputs(translated);
+      } catch (e) {
+        setTranslateError(e instanceof Error ? e.message : "Translation failed. Showing English content.");
+        setOutputs(next);
+      } finally {
+        setIsTranslating(false);
+      }
+    } else {
+      setOutputs(next);
+    }
   };
 
   return (
@@ -185,10 +234,39 @@ export default function ContentGenerator() {
           </div>
         )}
 
-        <FormatSelector
-          value={input.targetFormats}
-          onChange={(targetFormats) => setInput((i) => ({ ...i, targetFormats }))}
-        />
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Output Language
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {STEP12_LANGUAGES.map((lang) => (
+              <button
+                key={lang.value}
+                type="button"
+                onClick={() => setInput((i) => ({ ...i, language: lang.value }))}
+                className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                  (input.language ?? "en") === lang.value
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:border-indigo-300"
+                }`}
+              >
+                {lang.label}
+              </button>
+            ))}
+          </div>
+          {(input.language ?? "en") !== "en" && (
+            <p className="text-xs text-gray-500 mt-1">
+              ℹ️ AI-powered translation (English fallback for technical terms)
+            </p>
+          )}
+        </div>
+
+        <div className="mb-6">
+          <FormatSelector
+            value={input.targetFormats}
+            onChange={(targetFormats) => setInput((i) => ({ ...i, targetFormats }))}
+          />
+        </div>
 
         {input.targetFormats.includes("book-section") && (
           <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
@@ -307,12 +385,18 @@ export default function ContentGenerator() {
           onToneChange={(tone) => setInput((i) => ({ ...i, tone }))}
         />
 
+        {translateError && (
+          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            {translateError}
+          </p>
+        )}
         <button
           type="button"
-          onClick={handleGenerate}
-          className="w-full px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700"
+          onClick={() => void handleGenerate()}
+          disabled={isTranslating}
+          className="w-full px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          Generate
+          {isTranslating ? `Translating to ${STEP12_LANGUAGES.find((l) => l.value === (input.language ?? "en"))?.name ?? input.language}…` : "Generate"}
         </button>
       </div>
 
@@ -374,14 +458,24 @@ export default function ContentGenerator() {
 
       <div className="mt-8 p-4 rounded-xl bg-amber-50 border-2 border-amber-200 text-center">
         <p className="text-sm font-semibold text-amber-900 mb-2">People need to visit — the gamechanger</p>
-        <a
-          href={STEP12_DEFAULT_WEBSITE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block px-4 py-2 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600"
-        >
-          Visit Dr. Muddu&apos;s Metabolic Care (HOMA Clinic) →
-        </a>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <a
+            href={STEP12_DEFAULT_WEBSITE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-4 py-2 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600"
+          >
+            Visit Dr. Muddu&apos;s Metabolic Care (HOMA Clinic) →
+          </a>
+          <button
+            type="button"
+            onClick={copyWebsiteUrl}
+            className="inline-block px-4 py-2 rounded-lg bg-white border-2 border-amber-500 text-amber-800 font-medium hover:bg-amber-100"
+          >
+            {copiedUrl ? "Copied!" : "Copy Website URL"}
+          </button>
+        </div>
+        <p className="text-xs text-amber-800 mt-2">Universal link in every generated output: {STEP12_DEFAULT_WEBSITE_URL}</p>
       </div>
     </div>
   );

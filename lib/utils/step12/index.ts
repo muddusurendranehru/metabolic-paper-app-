@@ -3,8 +3,42 @@
  * Never import from app/research/steps/* or other lib/utils in Step 12 code.
  */
 
-export { DEFAULT_STEP12_STATE, DEFAULT_NEUTRAL_INPUT, DEFAULT_STEP12_INPUT, formatStep12Label, STEP12_DEFAULT_WEBSITE_URL, STEP12_DEFAULT_CLINIC, type Step12State } from "./step12-config";
+export {
+  DEFAULT_STEP12_STATE,
+  DEFAULT_NEUTRAL_INPUT,
+  DEFAULT_STEP12_INPUT,
+  formatStep12Label,
+  STEP12_CONSTANTS,
+  STEP12_DEFAULT_WEBSITE_URL,
+  STEP12_DEFAULT_CLINIC,
+  WEBSITE_CONFIG,
+  STEP12_LANGUAGES,
+  STEP12_DEFAULT_LANGUAGE,
+  type Step12State,
+} from "./step12-config";
+export {
+  getWebsiteLinkLine,
+  appendWebsiteLink,
+  ensureWebsiteLinkInContent,
+  injectWebsiteLink,
+  type LinkInjectorOptions,
+} from "./link-injector";
+export {
+  UNIVERSAL_TRANSLATIONS,
+  getUniversalTranslation,
+  getLanguageName,
+  getLanguageFlag,
+  type SupportedLanguage,
+} from "./universal-translations";
 export { generateNeutralContent } from "./step12-generator";
+export {
+  generateUniversalContent,
+  type UniversalContentInput,
+} from "./universal-content-generator";
+export {
+  generateBlogPost,
+  type BlogPostInput,
+} from "./blog-with-translate";
 export type {
   NeutralContentInput,
   NeutralContentOutput,
@@ -13,6 +47,7 @@ export type {
   Step12TargetFormat,
   Step12Audience,
   Step12Tone,
+  Step12Language,
 } from "./step12-types";
 export { extractPlainText, extractSnippet } from "./text-extractor";
 export { formatSection, formatBullets, formatDocument } from "./content-formatter";

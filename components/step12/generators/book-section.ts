@@ -16,6 +16,7 @@ import {
   extractSnippet,
   formatBookSection,
   formatAcademicContent,
+  STEP12_CONSTANTS,
   type AcademicHeading,
 } from "@/lib/utils/step12";
 
@@ -138,11 +139,13 @@ export function generateBookSection(
       ? `\n\n### Key Points\n${keyPoints.map((kp) => `- ${kp}`).join("\n")}`
       : "";
 
+  const websiteLine = `\n\n**${STEP12_CONSTANTS.WEBSITE_LABEL}:** ${STEP12_CONSTANTS.WEBSITE_URL}`;
   const markdown = [
     `# ${topic}`,
     content,
     keyPointsBlock,
     `\n### Suggested Reading\n${suggestedReading.map((ref) => `- ${ref}`).join("\n")}`,
+    websiteLine,
   ]
     .filter(Boolean)
     .join("\n")

@@ -11,9 +11,10 @@
  * Full structure: header, what is X, why it matters, key facts, what you can do, when to see doctor, footer.
  */
 
-import { extractPlainText, STEP12_DEFAULT_WEBSITE_URL } from "@/lib/utils/step12";
+import { extractPlainText, STEP12_DEFAULT_WEBSITE_URL, WEBSITE_CONFIG } from "@/lib/utils/step12";
 
 const WEBSITE_URL = STEP12_DEFAULT_WEBSITE_URL;
+const QR_CODE_LINE = `[QR Code: ${WEBSITE_CONFIG.qrCode(WEBSITE_URL)}]`;
 const CLINIC_PHONE = "09963721999";
 const DEFAULT_CLINIC = "HOMA Clinic";
 
@@ -103,6 +104,7 @@ ${getBottomLine(keyTerm)}
 Questions? Contact us:
 📞 ${CLINIC_PHONE}
 🌐 ${WEBSITE_URL}
+${QR_CODE_LINE}
 
 ${clinicName}
 Gachibowli, Hyderabad, Telangana

@@ -2,6 +2,8 @@
 
 **TyG Index Research Dashboard – 3-Paper System**
 
+**Latest (Step 12 – multi-language & links):** (1) Multi-language support: Step12Language en/hi/te/ta, `translations.ts` + `link-injector.ts`, blog and social generators language-aware; Tamil (ta) added. (2) Output Language button group (above Target formats) with flags and hint “AI-powered translation (English fallback for technical terms)” when non-English. (3) Universal website link: STEP12_CONSTANTS, getWebsiteLinkLine/appendWebsiteLink in all outputs; don’t destroy success.
+
 **Latest (Step 12):** (1) Facebook post generator: full structure (NEW RESEARCH ALERT, study highlights, key findings, clinical impact, who should watch, free resources, about, hashtags)—topic-agnostic, no invented n/r/p. (2) Handout generator: full patient-education layout (header, What is X, Why it matters, key facts, What you can do, When to see doctor, footer with phone & URL)—topic-agnostic. (3) FormatSelector: MCQ (3), Facebook, and icons for all formats; ContentGenerator handleGenerate comment documents mcq/youtube/whatsapp/facebook-post/handout wiring; don’t destroy success.
 
 **Today:** (1) ContentAmplificationInput-based generators added in `lib/utils`: `generateLectureSlides()` → Slide[], `generateTwitterThread()` → Tweet[] (with optional mediaUrl), `generateYouTubeShortsScript()` → VideoScript (60s scenes with timestamp, visual, textOverlay, voiceover). (2) Helpers: extractKeyTerm, getFormulaForTopic, getNormalRange, getElevatedThreshold, getHookQuestion, getFreeAlternative, formatStatResult—all topic-agnostic. (3) Don’t destroy success: existing Step 11 and research step-11 generators unchanged; new modules additive only.
