@@ -119,20 +119,20 @@ Simple nutrition facts for ${topic} – use the table below as a starting point 
 ## Quick Nutrition Facts (typical serving)
 | Nutrient | Amount |
 |----------|--------|
-| Calories | ~160 kcal |
-| Glycemic Index | Low (≤55) |
-| Fiber | ~3-4g |
-| Protein | ~6g |
-| Fat | ~14g |
-| Carbs | ~6g |
+| Calories | varies by food |
+| Glycemic Index | Low–Medium when unprocessed |
+| Fiber | varies |
+| Protein | varies |
+| Fat | varies |
+| Carbs | varies |
 
 ## Diabetes Verdict: ✅ Good in moderation
-**Portion Guidance:** ~23 almonds (1 oz / 28g) per day as part of balanced diet
+**Portion Guidance:** Consult your dietitian for personalized advice for ${topic}
 
 ### Smart Pairing Tips
-• Pair with fruits or yogurt for balanced snack
-• Choose raw or dry-roasted (avoid salted/sugar-coated)
-• Soak overnight for easier digestion (traditional practice)
+• Pair with fiber-rich foods to blunt glucose response
+• Choose minimally processed forms when possible
+• Monitor your blood sugar 2 hours after trying
 
 ### Practical Tips for You
 1. Start with small portions to assess tolerance
