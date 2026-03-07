@@ -1,7 +1,7 @@
 /**
- * Step 12 – guideline-aware blog generation (ICMR, ADA, WHO, natural content).
+ * Step 12 – single-routing blog: food → simple food template; clinical → PubMed (MCT); else → neutral.
  * POST { topic, audience?, language? } → { content } (full blog with optional SEO block).
- * Uses generateBlogPost (natural content + fallback). No steps 1–6.
+ * Uses generateBlogPost (one path per topic). No steps 1–6.
  */
 
 import { NextRequest, NextResponse } from "next/server";

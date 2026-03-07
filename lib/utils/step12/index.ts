@@ -103,9 +103,12 @@ export {
   buildMetaBlock,
   deriveSeoMeta,
   buildSchemaOrgArticle,
+  generateSchemaOrg,
   buildOpenGraphTags,
   buildTwitterCardTags,
   generateSlug,
+  generateMetaTitle,
+  generateMetaDescription,
   type SeoMeta,
 } from "./seo-utils";
 export {

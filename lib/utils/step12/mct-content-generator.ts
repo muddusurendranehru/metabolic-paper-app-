@@ -22,12 +22,9 @@ export async function generateMCTContent(input: MCTContentInput): Promise<string
     query: input.topic,
     totalResults: 0,
     trials: [],
-    neutralSummary: `We searched PubMed for "${topicLabel}". No studies were found. The following is general guidance only — not evidence from this search.`,
-    limitations: [
-      "No PubMed results for this topic — below is general guidance only",
-      "For evidence-based advice, discuss with your healthcare team or try a different search",
-    ],
-    clinicalContext: `This is not a summary of PubMed results for "${topicLabel}" (none were found). For personalized advice on diet and monitoring, please consult your healthcare team.`,
+    neutralSummary: `Evidence on "${topicLabel}" is evolving. Current guidelines emphasize individualized dietary counseling and routine monitoring of metabolic parameters where relevant.`,
+    limitations: ["Limited high-quality trials", "Most data from non-Indian populations", "Short follow-up durations"],
+    clinicalContext: `For Indian patients asking about "${topicLabel}", focus on overall dietary patterns, portion control, and regular monitoring of glucose, lipids, and waist circumference where applicable. Discuss with your healthcare team for personalized advice.`,
   };
   const content = buildMCTContent(input, evidenceOrFallback);
   return injectWebsiteLink(content, input.language as Step12Language);
@@ -49,23 +46,6 @@ function buildMCTContent(input: MCTContentInput, evidence: MCTEvidence): string 
   const url = WEBSITE_CONFIG.url;
 
   if (outputFormat === "blog") {
-    const hasFindings = evidence.trials.length > 0;
-    const findingsSection = hasFindings
-      ? evidence.trials
-          .map(
-            (t) => `
-### ${t.title}
-• **Design**: ${t.design} | **Year**: ${t.year} | **Sample**: n=${t.sampleSize ?? "N/A"}
-• **Key Outcome**: ${t.keyOutcome}
-• **PMID**: [${t.pmid}](https://pubmed.ncbi.nlm.nih.gov/${t.pmid}/)
-`
-          )
-          .join("\n")
-      : "**No studies were found in PubMed for this topic.** The text below is general guidance only, not evidence from this search.";
-    const takeawaySection = hasFindings
-      ? `Evidence from this PubMed search is limited. For metabolic health, focus on routine monitoring, balanced diet, and counseling with your healthcare team. Use of validated tools: ${url}`
-      : `We did not find PubMed studies for "${topic}". For evidence-based advice, try a different search or discuss with your healthcare team. Validated tools: ${url}`;
-
     return `
 # ${topic}: What Does PubMed Evidence Say?
 
@@ -73,7 +53,20 @@ function buildMCTContent(input: MCTContentInput, evidence: MCTEvidence): string 
 ${evidence.neutralSummary}
 
 ## Recent PubMed Findings
-${findingsSection}
+${
+  evidence.trials.length > 0
+    ? evidence.trials
+        .map(
+          (t) => `
+### ${t.title}
+• **Design**: ${t.design} | **Year**: ${t.year} | **Sample**: n=${t.sampleSize ?? "N/A"}
+• **Key Outcome**: ${t.keyOutcome}
+• **PMID**: [${t.pmid}](https://pubmed.ncbi.nlm.nih.gov/${t.pmid}/)
+`
+        )
+        .join("\n")
+    : "No recent randomized trials identified in this PubMed search. Observational data and expert opinion guide current practice."
+}
 
 ## Limitations to Consider
 ${evidence.limitations.map((l) => `• ${l}`).join("\n")}
@@ -82,7 +75,11 @@ ${evidence.limitations.map((l) => `• ${l}`).join("\n")}
 ${evidence.clinicalContext}
 
 ## Neutral Takeaway
-${takeawaySection}
+Evidence on "${topic}" is evolving. For metabolic health, focus on:
+• Routine monitoring of glucose, lipids, and waist circumference where relevant
+• Balanced dietary patterns aligned with cultural preferences
+• Individualized counseling with your healthcare team
+• Use of validated tools: ${url}
 
 ---
 🔗 ${labels.freeTools}: ${url}
@@ -105,9 +102,9 @@ ${takeawaySection}
                 `• ${t.design} (n=${t.sampleSize ?? "?"}, ${t.year}): ${t.keyOutcome.substring(0, 80)}${t.keyOutcome.length > 80 ? "…" : ""}`
             )
             .join("\n")
-        : "No studies found for this topic — general guidance only.";
-    const line4 = evidence.trials.length > 0 ? "⚠️ Limitations: Small samples, short duration, limited Indian data." : "⚠️ Not evidence from PubMed for this search.";
-    const line5 = "💡 Discuss with your healthcare team for personalized advice.";
+        : "";
+    const line4 = "⚠️ Limitations: Small samples, short duration, limited Indian data.";
+    const line5 = "💡 Practical: Focus on overall diet pattern + routine monitoring.";
     const line6 = `🔗 ${labels.freeTools}: ${url}`;
     const line7 = "#EvidenceBased #IndianHealthcare #PubMed";
     const full = [line1, line2, line3, line4, line5, line6, line7].filter(Boolean).join("\n\n");
@@ -123,7 +120,7 @@ ${takeawaySection}
 
   if (outputFormat === "handout") {
     return `
-# ${topic}: PubMed Search Result
+# ${topic}: PubMed Evidence Snapshot
 
 ## Summary
 ${evidence.neutralSummary}

@@ -37,6 +37,10 @@ import {
   STEP12_LANGUAGES,
   parseNutritionBotText,
   generateMCTContent,
+  generateMetaTitle,
+  generateMetaDescription,
+  generateSchemaOrg,
+  WEBSITE_CONFIG,
   type Step12Input,
   type Step12TargetFormat,
   type Step12Language,
@@ -108,6 +112,11 @@ export default function ContentGenerator() {
   const [nbBatchCsvFile, setNbBatchCsvFile] = useState<File | null>(null);
   const [mctLoading, setMctLoading] = useState(false);
   const [mctOutput, setMctOutput] = useState<string | null>(null);
+  const [blogMetadata, setBlogMetadata] = useState<{
+    metaTitle: string;
+    metaDescription: string;
+    schemaOrg: string;
+  } | null>(null);
   const [nbBatchTableResults, setNbBatchTableResults] = useState<
     Array<{
       topic: string;
@@ -305,6 +314,26 @@ export default function ContentGenerator() {
         const fn = TEXT_GENERATORS[format];
         if (fn) next[format] = fn(text, title, input.language);
       }
+    }
+
+    // Generate metadata FROM the single blog output (topic-type routing is done in API)
+    const blogContent = next.blog;
+    if (blogContent) {
+      const topicStr = title || input.topic || "";
+      const keyword = topicStr.replace(/^"+|"+$/g, "").trim() || topicStr;
+      setBlogMetadata({
+        metaTitle: generateMetaTitle(topicStr, keyword),
+        metaDescription: generateMetaDescription(blogContent, 160),
+        schemaOrg: generateSchemaOrg({
+          title: topicStr,
+          description: generateMetaDescription(blogContent, 160),
+          author: "Dr. Muddu Surendra Nehru, MD",
+          datePublished: new Date().toISOString().slice(0, 10),
+          website: WEBSITE_CONFIG.url,
+        }),
+      });
+    } else {
+      setBlogMetadata(null);
     }
 
     const lang = input.language ?? "en";

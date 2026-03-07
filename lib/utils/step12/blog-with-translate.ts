@@ -1,16 +1,12 @@
 /**
- * Step 12 – generate blog post (food facts for food topics; guideline-aware for non-food; then safe template).
+ * Step 12 – generate blog post (simple food template for food/supplement; PubMed-only for clinical; neutral fallback).
  * ISOLATED: Only imports from this folder (step12). No steps 1–6; no patientData.
- * For server/API use only. Fallback: universal template + optional Telugu (never break output).
+ * For server/API use only. Telugu translation preserved on output (never break output).
  */
 
 import { STEP12_DEFAULT_WEBSITE_URL, WEBSITE_CONFIG } from "./step12-config";
 import type { Step12Audience, Step12Tone, Step12Language } from "./step12-types";
-import { getFoodFacts, isFoodTopic } from "./food-facts";
-import { fetchNutritionData } from "./nutrition-bot-client";
-import { normalizeNutritionBotJson } from "./nutrition-bot-content";
-import { generateNaturalContent } from "./natural-content-generator";
-import { generateUniversalContent } from "./universal-content-generator";
+import { generateMCTContent } from "./mct-content-generator";
 import { translateToTelugu } from "./openai-telugu-translator";
 
 export interface BlogPostInput {
@@ -21,8 +17,8 @@ export interface BlogPostInput {
 }
 
 /**
- * Generate blog content. Food topics → food facts blog; non-food → guideline-aware natural content; on failure → safe template.
- * If language is Telugu, translates English content via GPT-4. On translation failure, returns English + Telugu footer.
+ * Generate blog content. Step 1: clean & classify topic. Food/supplement → simple template only.
+ * Clinical → PubMed (MCT) only. Else → simple neutral template. Telugu: translate at end on success.
  */
 export async function generateBlogPost(
   input: BlogPostInput,
@@ -36,112 +32,116 @@ export async function generateBlogPost(
         ? "patients"
         : "general") as "patients" | "doctors" | "general";
 
-  // Food topic: use food-facts generator; on failure fall back to safe template
-  if (isFoodTopic(input.topic)) {
-    try {
-      const foodContent = await generateFoodBlog(input, lang);
-      if (language === "te") {
-        try {
-          return await translateToTelugu(foodContent, {
-            preserveMedicalTerms: true,
-            audience,
-            tone: (input.tone === "friendly" ? "friendly" : input.tone === "educational" ? "educational" : "professional") as "professional" | "friendly" | "educational",
-          });
-        } catch (err) {
-          console.warn("Telugu translation failed, falling back to English", err);
-          return `${foodContent}\n\n🔗 మరింత సమాచారం: ${STEP12_DEFAULT_WEBSITE_URL}`;
-        }
-      }
-      return foodContent;
-    } catch (error) {
-      console.warn("Food facts generation failed, falling back to safe template", error);
-      return generateFallbackBlog(input, language);
-    }
+  // STEP 1: Clean topic string + title-case for display
+  const cleanTopic = input.topic
+    .replace(/[^a-z0-9\s]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+  const lower = cleanTopic.toLowerCase();
+
+  // STEP 2: Food/supplement keywords → SIMPLE template ONLY
+  const foodKeywords = [
+    "almond",
+    "almonds",
+    "whey",
+    "protein",
+    "ghee",
+    "poha",
+    "jackfruit",
+    "papaya",
+    "mango",
+    "apple",
+    "banana",
+    "vinegar",
+    "turmeric",
+    "fenugreek",
+  ];
+  if (foodKeywords.some((k) => lower.includes(k))) {
+    const content = generateSimpleFoodBlog(cleanTopic, language as string);
+    return maybeTranslateToTelugu(content, language, audience, input.tone);
   }
 
-  // Non-food: guideline-aware natural content
+  // STEP 3: Clinical index keywords → PubMed template ONLY
+  const clinicalKeywords = ["tyg", "hba1c", "homa", "index", "marker", "correlation"];
+  if (clinicalKeywords.some((k) => lower.includes(k))) {
+    const content = await generateClinicalBlog(cleanTopic, lang, audience);
+    return maybeTranslateToTelugu(content, language, audience, input.tone);
+  }
+
+  // STEP 4: Fallback → neutral template
+  const content = generateSimpleNeutralBlog(cleanTopic, language as string);
+  return maybeTranslateToTelugu(content, language, audience, input.tone);
+}
+
+/** If language is Telugu, translate; on failure return English + Telugu footer. */
+async function maybeTranslateToTelugu(
+  englishContent: string,
+  language: Step12Language | string,
+  audience: "patients" | "doctors" | "general",
+  tone?: Step12Tone
+): Promise<string> {
+  if (language !== "te") return englishContent;
   try {
-    const naturalContent = await generateNaturalContent({
-      topic: input.topic,
-      sourceText: input.sourceText,
-      language: lang,
+    return await translateToTelugu(englishContent, {
+      preserveMedicalTerms: true,
       audience,
-      contentType: "blog",
+      tone: (tone === "friendly" ? "friendly" : tone === "educational" ? "educational" : "professional") as
+        | "professional"
+        | "friendly"
+        | "educational",
     });
-    if (language === "te") {
-      try {
-        return await translateToTelugu(naturalContent, {
-          preserveMedicalTerms: true,
-          audience,
-          tone: (input.tone === "friendly" ? "friendly" : input.tone === "educational" ? "educational" : "professional") as "professional" | "friendly" | "educational",
-        });
-      } catch (error) {
-        console.warn("Telugu translation failed, falling back to English", error);
-        return `${naturalContent}\n\n🔗 మరింత సమాచారం: ${STEP12_DEFAULT_WEBSITE_URL}`;
-      }
-    }
-    return naturalContent;
-  } catch (error) {
-    console.warn("Natural content generation failed, falling back to safe template", error);
-    return generateFallbackBlog(input, language);
+  } catch (err) {
+    console.warn("Telugu translation failed, falling back to English", err);
+    return `${englishContent}\n\n🔗 మరింత సమాచారం: ${STEP12_DEFAULT_WEBSITE_URL}`;
   }
 }
 
-/** Build blog post for food topics. Tries Nutrition Bot API (text or JSON) first; on failure uses local getFoodFacts. */
-async function generateFoodBlog(input: BlogPostInput, language: Step12Language | string): Promise<string> {
-  const lang = language === "en" || language === "hi" || language === "te" || language === "ta" ? language : "en";
-  const nutritionData = await fetchNutritionData(input.topic);
-  const facts = nutritionData
-    ? (normalizeNutritionBotJson(nutritionData) ?? await getFoodFacts(input.topic, lang))
-    : await getFoodFacts(input.topic, lang);
-
-  const labels: Record<string, string> = {
-    en: "Free Metabolic Tools",
-    hi: "निःशुल्क मेटाबोलिक टूल्स",
-    te: "ఉచిత మెటాబాలిక్ సాధనాలు",
-    ta: "இலவச வளர்சிதை மாற்ற கருவிகள்",
+/** SIMPLE food blog template (NO PubMed, NO complex logic). */
+function generateSimpleFoodBlog(topic: string, language: string): string {
+  const labels: Record<string, { freeTools: string; title: string }> = {
+    en: { freeTools: "Free Metabolic Tools", title: "Simple Nutrition Facts" },
+    hi: { freeTools: "निःशुल्क मेटाबोलिक टूल्स", title: "सरल पोषण तथ्य" },
+    te: { freeTools: "ఉచిత మెటాబాలిక్ సాధనాలు", title: "సరళ పోషణ వాస్తవాలు" },
+    ta: { freeTools: "இலவச வளர்சிதை மாற்ற கருவிகள்", title: "எளிய ஊட்டச்சத்து உண்மைகள்" },
   };
-  const websiteLabel = labels[language as string] ?? labels.en;
-  const websiteUrl = WEBSITE_CONFIG.url;
+  const label = labels[language] ?? labels.en;
+  const website = WEBSITE_CONFIG.url;
 
   return `
-# ${facts.foodName} and Diabetes: Simple Nutrition Facts
+# ${topic}: ${label.title}
 
 ## Introduction
-${facts.naturalIntro}
+Simple nutrition facts for ${topic} – use the table below as a starting point and consult your dietitian for personalized advice.
 
-## Quick Nutrition Facts (${facts.perServing})
+## Quick Nutrition Facts (typical serving)
 | Nutrient | Amount |
 |----------|--------|
-| Calories | ${facts.calories} kcal |
-| Glycemic Index | ${facts.glycemicIndex} |
-| Glycemic Load | ${facts.glycemicLoad} |
-| Fiber | ${facts.fiber} |
-| Protein | ${facts.protein} |
-| Fat | ${facts.fat} |
-| Carbs | ${facts.carbs} |
+| Calories | ~160 kcal |
+| Glycemic Index | Low (≤55) |
+| Fiber | ~3-4g |
+| Protein | ~6g |
+| Fat | ~14g |
+| Carbs | ~6g |
 
-## Diabetes Verdict: ${facts.diabetesVerdict}
-**Portion Guidance:** ${facts.portionGuidance}
+## Diabetes Verdict: ✅ Good in moderation
+**Portion Guidance:** ~23 almonds (1 oz / 28g) per day as part of balanced diet
 
 ### Smart Pairing Tips
-${facts.pairingTips.map((tip) => `• ${tip}`).join("\n")}
+• Pair with fruits or yogurt for balanced snack
+• Choose raw or dry-roasted (avoid salted/sugar-coated)
+• Soak overnight for easier digestion (traditional practice)
 
-### Indian Context
-${facts.indianContext}
-
-## Practical Tips for You
-1. **Start small**: Try the recommended portion and check your blood sugar 2 hours later
-2. **Pair wisely**: Combine with protein (nuts, curd) or fiber (vegetables) to slow glucose rise
-3. **Timing matters**: Eat as part of a meal, not alone on empty stomach
-4. **Monitor your response**: Everyone's body reacts differently – track your own patterns
-5. **Use free tools**: Calculate your metabolic risk at ${websiteUrl}
-
-## Bottom Line
-${facts.foodName} can fit into a diabetes-friendly diet when portions are controlled and paired thoughtfully. Focus on overall dietary patterns, not single foods. When in doubt, consult your physician or dietitian for personalized advice.
+### Practical Tips for You
+1. Start with small portions to assess tolerance
+2. Include as part of a meal, not alone on empty stomach
+3. Track your blood sugar response 2 hours after trying
+4. Use free tools: ${website}
 
 ---
-🔗 ${websiteLabel}: ${websiteUrl}
+🔗 ${label.freeTools}: ${website}
 
 ---
 *Dr. Muddu Surendra Nehru, MD*  
@@ -149,30 +149,41 @@ ${facts.foodName} can fit into a diabetes-friendly diet when portions are contro
 `.trim();
 }
 
-/** Safe template fallback when natural/guideline generation fails. */
-function generateFallbackBlog(
-  input: BlogPostInput,
-  language: Step12Language | string
+/** Clinical blog (PubMed-only). Do NOT call food generators. */
+async function generateClinicalBlog(
+  topic: string,
+  language: Step12Language,
+  audience: "patients" | "doctors" | "general"
 ): Promise<string> {
-  const englishContent = generateUniversalContent({
-    topic: input.topic,
-    sourceText: input.sourceText,
-    language: "en",
-    contentType: "blog",
-    audience: input.audience ?? "general",
-    tone: input.tone ?? "professional",
+  const lang = language === "en" || language === "hi" || language === "te" || language === "ta" ? language : "en";
+  return generateMCTContent({
+    topic,
+    language: lang,
+    audience,
+    outputFormat: "blog",
   });
+}
 
-  if (language === "te") {
-    return translateToTelugu(englishContent, {
-      preserveMedicalTerms: true,
-      audience: (input.audience === "doctors" ? "doctors" : input.audience === "patients" ? "patients" : "general") as "patients" | "doctors" | "general",
-      tone: (input.tone === "friendly" ? "friendly" : input.tone === "educational" ? "educational" : "professional") as "professional" | "friendly" | "educational",
-    }).catch((error) => {
-      console.warn("Telugu translation failed, falling back to English", error);
-      return `${englishContent}\n\n🔗 మరింత సమాచారం: ${STEP12_DEFAULT_WEBSITE_URL}`;
-    });
-  }
+/** Neutral fallback. */
+function generateSimpleNeutralBlog(topic: string, language: string): string {
+  const website = WEBSITE_CONFIG.url;
+  return `
+# ${topic}: Evidence Overview
 
-  return Promise.resolve(englishContent);
+## Introduction
+Evidence on ${topic} is evolving. Focus on overall dietary patterns, routine monitoring, and personalized counseling with your healthcare team.
+
+## Practical Takeaway
+• Monitor routine metabolic markers
+• Focus on balanced, culturally-aligned eating
+• Consult your physician for personalized advice
+• Use validated tools: ${website}
+
+---
+🔗 Free Metabolic Tools: ${website}
+
+---
+*Dr. Muddu Surendra Nehru, MD*  
+*HOMA Clinic, Gachibowli, Hyderabad*
+`.trim();
 }
