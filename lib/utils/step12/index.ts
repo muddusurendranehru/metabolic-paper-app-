@@ -71,6 +71,19 @@ export {
   type ParsedNutritionData,
 } from "./nutrition-text-parser";
 export {
+  getMctContent,
+  type MctTrialResult,
+} from "./mct-agent";
+export {
+  fetchMCTEvidence,
+  buildMCTContent,
+  type MCTEvidence,
+} from "./mct-pubmed-agent";
+export {
+  generateMCTContent,
+  type MCTContentInput,
+} from "./mct-content-generator";
+export {
   generateNaturalContent,
   type NaturalContentInput,
 } from "./natural-content-generator";

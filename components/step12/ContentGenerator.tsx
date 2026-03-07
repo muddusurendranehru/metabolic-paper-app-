@@ -36,6 +36,7 @@ import {
   STEP12_DEFAULT_CLINIC,
   STEP12_LANGUAGES,
   parseNutritionBotText,
+  generateMCTContent,
   type Step12Input,
   type Step12TargetFormat,
   type Step12Language,
@@ -105,6 +106,8 @@ export default function ContentGenerator() {
   const [useNutritionBot, setUseNutritionBot] = useState(true);
   // Batch CSV upload + results table
   const [nbBatchCsvFile, setNbBatchCsvFile] = useState<File | null>(null);
+  const [mctLoading, setMctLoading] = useState(false);
+  const [mctOutput, setMctOutput] = useState<string | null>(null);
   const [nbBatchTableResults, setNbBatchTableResults] = useState<
     Array<{
       topic: string;
@@ -593,6 +596,62 @@ export default function ContentGenerator() {
             placeholder="e.g. Role of Ghee in Diabetes"
             className="w-full p-2 border rounded text-sm"
           />
+        </div>
+
+        {/* === MCT Evidence: below Topic; always visible (don't destroy success) === */}
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-semibold text-blue-900 mb-2">🔬 PubMed Evidence Mode (Optional)</h4>
+            <p className="text-sm text-blue-700 mb-3">
+              Generate neutral, PubMed-checked content for MCT-related topics. Result is filled into Blog, Twitter, and Handout so you can use it for all.
+              <br />
+              <span className="text-xs">• Public PubMed API only • No patient data • Fallback if unavailable</span>
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                const topic = input.topic?.trim() || "MCT metabolic health";
+                setMctLoading(true);
+                setMctOutput(null);
+                try {
+                  const audience = input.audience === "patients" || input.audience === "doctors" || input.audience === "general" ? input.audience : "general";
+                  const lang = (input.language ?? "en") as "en" | "hi" | "te" | "ta";
+                  const contentBlog = await generateMCTContent({ topic, language: lang, audience, outputFormat: "blog" });
+                  const contentTwitter = await generateMCTContent({ topic, language: lang, audience, outputFormat: "twitter" });
+                  const contentHandout = await generateMCTContent({ topic, language: lang, audience, outputFormat: "handout" });
+                  setOutputs((prev) => ({
+                    ...prev,
+                    blog: contentBlog,
+                    twitter: contentTwitter,
+                    handout: contentHandout,
+                  }));
+                  setMctOutput(contentBlog);
+                } catch (e) {
+                  console.warn("MCT content generation failed", e);
+                  setMctOutput(null);
+                } finally {
+                  setMctLoading(false);
+                }
+              }}
+              disabled={mctLoading}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
+            >
+              {mctLoading ? "Generating…" : "Generate PubMed-Checked MCT Content"}
+            </button>
+            {mctOutput && (
+              <div className="mt-4 p-3 bg-white border border-blue-200 rounded-lg">
+                <h5 className="text-sm font-semibold text-blue-900 mb-2">Generated content (copy-paste ready) — use in Blog / Twitter / Handout below</h5>
+                <pre className="text-xs overflow-auto max-h-[320px] p-3 bg-gray-50 rounded whitespace-pre-wrap font-sans border border-gray-200">
+                  {mctOutput}
+                </pre>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard?.writeText(mctOutput)}
+                  className="mt-2 text-sm text-blue-700 hover:underline"
+                >
+                  Copy to clipboard
+                </button>
+              </div>
+            )}
         </div>
 
         <SourceTypeSelector
