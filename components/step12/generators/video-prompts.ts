@@ -12,7 +12,7 @@
  */
 
 import type { Step12Input } from "@/lib/utils/step12";
-import { generateVideoAssets, generateHyperNaturalPrompt } from "./video-generator";
+import { generateVideoAssets, generateHyperNaturalPrompt, generateHyperNatural50sScript } from "./video-generator";
 
 /** Input with optional CTA/branding; same as video-generator VideoInput. */
 export type VideoPromptInput = Step12Input & { websiteUrl?: string; clinic?: string };
@@ -27,7 +27,7 @@ export function getHyperNaturalPrompt(input: VideoPromptInput): string {
 /**
  * Get HyperNatural prompt as formatted JSON (9:16, educational_short, scenes + transitions + captions).
  */
-export { generateHyperNaturalPrompt } from "./video-generator";
+export { generateHyperNaturalPrompt, generateHyperNatural50sScript } from "./video-generator";
 
 /**
  * Get Grok-style text prompt for 60s educational video script.

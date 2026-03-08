@@ -45,7 +45,7 @@ import {
   type Step12TargetFormat,
   type Step12Language,
 } from "@/lib/utils/step12";
-import { generateHyperNaturalPrompt } from "./generators/video-prompts";
+import { generateHyperNatural50sScript } from "./generators/video-prompts";
 import { generateMobileInfographicPrompt } from "./generators/mobile-infographic";
 import CollaborationTrackerCard from "./CollaborationTrackerCard";
 
@@ -262,7 +262,7 @@ export default function ContentGenerator() {
     const next: Record<Step12TargetFormat, string> = {} as Record<Step12TargetFormat, string>;
     for (const format of input.targetFormats) {
       if (format === "hypernatural") {
-        next[format] = generateHyperNaturalPrompt(inputWithDefaults);
+        next[format] = generateHyperNatural50sScript(inputWithDefaults);
       } else if (format === "infographic") {
         next[format] = generateMobileInfographicPrompt(inputWithDefaults);
       } else if (format === "book-section") {
@@ -384,7 +384,7 @@ export default function ContentGenerator() {
     const next: Record<Step12TargetFormat, string> = {} as Record<Step12TargetFormat, string>;
     for (const format of input.targetFormats) {
       if (format === "hypernatural") {
-        next[format] = generateHyperNaturalPrompt(inputWithDefaults);
+        next[format] = generateHyperNatural50sScript(inputWithDefaults);
       } else if (format === "infographic") {
         next[format] = generateMobileInfographicPrompt(inputWithDefaults);
       } else if (format === "book-section") {
@@ -990,6 +990,19 @@ export default function ContentGenerator() {
       )}
 
       <CollaborationTrackerCard />
+
+      <div className="mt-6 rounded-xl border-2 border-violet-200 bg-violet-50/80 p-4">
+        <h2 className="text-lg font-bold text-violet-900 mb-2">🎬 Patient review / testimonials</h2>
+        <p className="text-sm text-violet-800 mb-3">
+          Generate patient testimonial scripts and the 45s HOMA video brief (Shorts/Reels). Warm, personal tone only — never mixed with clinical content.
+        </p>
+        <Link
+          href="/ai/testimonials"
+          className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700"
+        >
+          Open Patient Review Generator →
+        </Link>
+      </div>
 
       <div className="flex flex-wrap gap-4 mt-6">
         <Link href="/" className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-medium hover:bg-gray-300">

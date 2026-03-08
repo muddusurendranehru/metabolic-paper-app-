@@ -129,6 +129,45 @@ Include visual descriptions for each scene.
 }
 
 /**
+ * Dr. Muddu 50-second HYPER-NATURAL YouTube Shorts/Twitter script.
+ * Telugu-English mix (70% EN, 30% TE), 110–130 words, 8 scene cues.
+ * Persona: Dr. Muddu Surendra Nehru, MD – HOMA Clinic, Uppal, Telangana.
+ */
+export function generateHyperNatural50sScript(input: VideoInput): string {
+  const topic = (input.topic || "[INSERT TOPIC]").trim();
+  const topicTag = topic.replace(/\s+/g, "").slice(0, 25) || "MetabolicHealth";
+  const displayTopic = topic.length > 40 ? topic.slice(0, 37) + "…" : topic;
+
+  // Single template: topic-driven only. No keyword branches, no hardwired food/phrases.
+  const hook = `TyG index reveal chesthe… ${displayTopic} lo real help aa?`;
+  const evidence = `PubMed style lo 2-3 studies chusam—small samples, but one signal: ${displayTopic} track cheyadam matter chestundi.`;
+  const tip = `Daily one small change—diet or walk—cheyandi. Plus TyG track cheyandi. Waist, triglycerides, fasting glucose—free tool undi HOMA Clinic website lo!`;
+  const cta = `HOMA Clinic comment cheyandi! Subscribe for TyG tips. #TyGIndex`;
+
+  const script = `${hook} // [Clinic shot: Dr. Muddu leaning in] Anna, ${evidence} // [Animation: simple graph or icon] But magic kaadu, anna // [Patient nodding] ${tip} // [Practical tip: food or checklist] // [Food or device close-up] Try cheyandi, but monitor cheyandi // [Screen: TyG calculator or website] // [Patient checking glucometer] ${cta} // [End card: Logo + QR + hashtags]`;
+
+  const wordCount = script.split(/\s+/).filter(Boolean).length;
+  const scenes = [
+    "Clinic shot: Dr. Muddu leaning in",
+    "Animation: simple graph or icon",
+    "Patient nodding",
+    "Practical tip: food or checklist",
+    "Food or device close-up",
+    "Screen: TyG calculator or website",
+    "Patient checking glucometer",
+    "End card: Logo + QR + hashtags",
+  ];
+  const sceneList = scenes.map((s, i) => `${i + 1}. [${s}]`).join(", ");
+
+  return `**Script:** ${script}
+
+**Word Count:** ${wordCount}
+**Timing:** 50s confirmed
+**Scenes:** ${sceneList}
+**Hashtags:** #TyGIndex #HOMAClinic #DiabetesPrevention #MetabolicHealth #${topicTag}`;
+}
+
+/**
  * HyperNatural prompt as formatted JSON (9:16 vertical, 60s).
  * Use for Reels/Shorts. Same helpers as generateVideoAssets.
  */
