@@ -5,9 +5,9 @@
  * Isolated: no imports from app/research/steps, no patient data.
  */
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { buildTestimonialScript } from "./generator";
-import { getTestimonialScript, SAFE_TESTIMONIAL_TEMPLATES } from "@/lib/utils/testimonials/review-generator";
+import { getTestimonialScript, get45sScriptForTopic, SAFE_TESTIMONIAL_TEMPLATES } from "@/lib/utils/testimonials/review-generator";
 import { getHoma45sVideoSpec, getHoma45sVideoSpecWithScript } from "@/lib/utils/testimonials/homa-45s-spec";
 
 export default function TestimonialsPage() {
@@ -22,13 +22,22 @@ export default function TestimonialsPage() {
   const scriptTextareaRef = useRef<HTMLTextAreaElement>(null);
   const briefTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  /** When quick topic changes, update script and 45s brief to 45s format (HOOK + topic middle + CLOSE). */
+  useEffect(() => {
+    if (!selectedTopic.trim()) return;
+    const script45s = get45sScriptForTopic(selectedTopic);
+    if (script45s) {
+      setScript(script45s);
+      setEditable45sSpec(getHoma45sVideoSpecWithScript(script45s));
+    }
+  }, [selectedTopic]);
+
   const handleGenerate = () => {
     const topicToTry = selectedTopic || theme.trim();
-    const template = topicToTry ? getTestimonialScript(topicToTry) : null;
-    if (template) {
-      const topicScript = `${template.hook}\n\n${template.middle}\n\n${template.close}\n\n---\n${template.footer}`;
-      setScript(topicScript);
-      setEditable45sSpec(getHoma45sVideoSpecWithScript(topicScript));
+    const script45s = topicToTry ? get45sScriptForTopic(topicToTry) : null;
+    if (script45s) {
+      setScript(script45s);
+      setEditable45sSpec(getHoma45sVideoSpecWithScript(script45s));
     } else {
       const out = buildTestimonialScript({
         theme: theme.trim() || "experience",
@@ -162,7 +171,7 @@ export default function TestimonialsPage() {
       <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4">
         <h2 className="mb-2 text-sm font-semibold text-indigo-900">45s HOMA video brief (Shorts/Reels)</h2>
         <p className="mb-3 text-xs text-indigo-800">
-          Full production spec (photo, voice, script, 8 visuals, style, 1080p 9:16). <strong>SCRIPT is linked to the selected Quick topic</strong> when you click Generate script above. Edit below or Reset to template. Use for video production or AI video tools.
+          Full production spec (photo, voice, script, 8 visuals, style, 1080p 9:16). <strong>SCRIPT updates with the selected Quick topic</strong>—change the dropdown or click Generate script; not hardwired to one topic. Edit below or Reset to template. Use for video production or AI video tools.
         </p>
         <div className="flex flex-wrap gap-2">
           <button

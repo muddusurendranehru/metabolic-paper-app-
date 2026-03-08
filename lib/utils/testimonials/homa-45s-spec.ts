@@ -38,7 +38,7 @@ VISUALS (8 cues):
 
 STYLE: Photographic realistic, warm clinic lighting, trustworthy doctor-patient feel.
 DURATION: 45 seconds exactly.
-END SCREEN: "HOMA Clinics ${HOMA_PHONE}" (last 3 seconds)
+END SCREEN: "HOMA Clinic | Dr. Muddu Surendra Nehru, MD | For information only – not medical advice." (last 3 seconds)
 
 OUTPUT: MP4 video, 1080p, vertical 9:16 for Shorts/Reels.
 `.trim();
@@ -76,7 +76,7 @@ VISUALS (8 cues):
 
 STYLE: Photographic realistic, warm clinic lighting, trustworthy doctor-patient feel.
 DURATION: 45 seconds exactly.
-END SCREEN: "HOMA Clinics ${HOMA_PHONE}" (last 3 seconds)
+END SCREEN: "HOMA Clinic | Dr. Muddu Surendra Nehru, MD | For information only – not medical advice." (last 3 seconds)
 
 OUTPUT: MP4 video, 1080p, vertical 9:16 for Shorts/Reels.
 `.trim();

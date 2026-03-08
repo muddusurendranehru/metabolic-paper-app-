@@ -48,6 +48,7 @@ import {
 import { generateHyperNatural50sScript } from "./generators/video-prompts";
 import { generateMobileInfographicPrompt } from "./generators/mobile-infographic";
 import CollaborationTrackerCard from "./CollaborationTrackerCard";
+import TestimonialCopyBtn from "./testimonial-copy-btn";
 
 const TEXT_GENERATORS: Partial<
   Record<Step12TargetFormat, (text: string, title?: string, language?: Step12Language) => string>
@@ -996,12 +997,15 @@ export default function ContentGenerator() {
         <p className="text-sm text-violet-800 mb-3">
           Generate patient testimonial scripts and the 45s HOMA video brief (Shorts/Reels). Warm, personal tone only — never mixed with clinical content.
         </p>
-        <Link
-          href="/ai/testimonials"
-          className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700"
-        >
-          Open Patient Review Generator →
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/ai/testimonials"
+            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700"
+          >
+            Open Patient Review Generator →
+          </Link>
+          <TestimonialCopyBtn />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-4 mt-6">

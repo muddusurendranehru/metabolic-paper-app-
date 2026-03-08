@@ -7,7 +7,11 @@
  * - If deleted, rest of app works 100%
  */
 
-import { TESTIMONIAL_TEMPLATES_30 } from "./testimonial-templates-data";
+import {
+  TESTIMONIAL_TEMPLATES_30,
+  HOMA_45S_HOOK,
+  HOMA_45S_CLOSE,
+} from "./testimonial-templates-data";
 
 /**
  * Testimonials – patient review scripts ONLY.
@@ -20,7 +24,11 @@ export interface TestimonialTemplate {
   middle: string;
   close: string;
   footer: string;
+  middle45s?: string;
 }
+
+const FALLBACK_MIDDLE_45S =
+  "Na numbers track chesi, follow-up plan follow chesam. // Small changes: walking, diet, TyG tracking. // 2–3 months lo improvement feel ayindi, sugar stable. //";
 
 /** 30 safe templates – data in testimonial-templates-data.ts only */
 export const SAFE_TESTIMONIAL_TEMPLATES: TestimonialTemplate[] =
@@ -46,6 +54,17 @@ export function getTestimonialScript(topic: string): TestimonialTemplate | null 
     return t.includes(firstWord) || template.topic.toLowerCase().includes(t);
   });
   return found ?? null;
+}
+
+/**
+ * Get 45s video script for a topic: fixed HOOK + topic-specific MIDDLE (70% English + 30% Telugu) + fixed CLOSE + footer.
+ * Use for "Copy full brief" and script textarea when a Quick topic is selected.
+ */
+export function get45sScriptForTopic(topic: string): string | null {
+  const template = getTestimonialScript(topic);
+  if (!template) return null;
+  const middle = template.middle45s ?? FALLBACK_MIDDLE_45S;
+  return `${HOMA_45S_HOOK}\n\n${middle}\n\n${HOMA_45S_CLOSE}\n\n---\n${template.footer}`.trim();
 }
 
 export interface TestimonialScriptInput {
