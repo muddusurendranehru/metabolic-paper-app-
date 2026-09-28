@@ -69,25 +69,25 @@ export function Header() {
                 </p>
               </a>
 
-              {/* Paper 2: Submitted */}
-              <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+              {/* Paper 2: Published */}
+              <a href="https://doi.org/10.25258/ijcpr.18.2.136" target="_blank" rel="noopener noreferrer" className="block px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:opacity-90">
                 <p className="text-xs font-semibold text-blue-800">
-                  📤 Paper 2: Submitted
+                  📤 Paper 2: Published
                 </p>
                 <p className="text-xs text-blue-600">
-                  60 Patients • Awaiting Review
+                  IJCPR 2026 • View DOI →
                 </p>
-              </div>
+              </a>
 
-              {/* Paper 3: Active */}
-              <div className="px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg">
+              {/* Paper 3: Published */}
+              <a href="https://doi.org/10.61336/im/26-3-10" target="_blank" rel="noopener noreferrer" className="block px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg hover:opacity-90">
                 <p className="text-xs font-semibold text-purple-800">
-                  🧪 Paper 3: Active
+                  🧪 Paper 3: Published
                 </p>
                 <p className="text-xs text-purple-600">
-                  TyG-HbA1c • In Progress
+                  Int J Med 2026 • View DOI →
                 </p>
-              </div>
+              </a>
             </div>
           </div>
         </div>
