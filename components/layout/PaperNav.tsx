@@ -45,9 +45,9 @@ export function PaperNav() {
             👥 Step 13: Admin
           </Link>
 
-          {/* Paper 2: Submitted – status only */}
+          {/* Paper 2: Published – status only */}
           <Link href="/submitted" className="px-4 py-3 text-amber-600 hover:text-amber-700 text-sm font-medium">
-            📤 Paper 2: Submitted
+            📤 Paper 2: Published
           </Link>
 
           {/* Paper 1: Published */}

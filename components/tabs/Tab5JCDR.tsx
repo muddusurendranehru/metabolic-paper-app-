@@ -226,7 +226,7 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
               Paper 3: TyG &amp; HbA1c Correlation
             </h2>
             <p className="text-sm text-violet-700">🆕 NEW (HbA1c field added)</p>
-            <p className="text-sm text-violet-800 font-medium">✏️ ACTIVE: Full development workspace</p>
+            <p className="text-sm text-violet-800 font-medium">PUBLISHED: Int J Med 2026;8(2) <a href="https://doi.org/10.61336/im/26-3-10" target="_blank" rel="noopener noreferrer" className="underline">DOI</a></p>
           </div>
         </div>
 
@@ -237,9 +237,9 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
             <a href="https://doi.org/10.61336/jccp/25-08-50" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline ml-1">DOI →</a>
           </div>
           <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm">
-            <span className="font-semibold text-amber-800">Paper 2 (Submitted):</span>
-            <span className="text-amber-700 ml-2">TyG &amp; Waist: 60-Patient Study. Manuscript written. </span>
-            <Link href="/submitted" className="text-amber-600 hover:underline ml-1">Status →</Link>
+            <span className="font-semibold text-amber-800">Paper 2 (Published):</span>
+            <span className="text-amber-700 ml-2">TyG-WC Index &amp; Insulin Resistance (50 patients). IJCPR 2026;18(2):826-833. </span>
+            <a href="https://doi.org/10.25258/ijcpr.18.2.136" target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:underline ml-1">DOI </a>
           </div>
         </div>
       </div>
@@ -253,12 +253,12 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
             <p className="text-xs text-green-600 mt-1">✅ PUBLISHED • JCCP 2025 • <a href="https://doi.org/10.61336/jccp/25-08-50" target="_blank" rel="noopener noreferrer" className="underline">DOI</a></p>
           </div>
           <div className="p-3 bg-white rounded border border-amber-100">
-            <p className="text-sm text-amber-800 font-semibold">Paper 2: TyG &amp; Waist (60-patient)</p>
-            <p className="text-xs text-amber-600 mt-1">📤 SUBMITTED • Read-only status</p>
+            <p className="text-sm text-amber-800 font-semibold">Paper 2: TyG-WC &amp; Insulin Resistance (50 patients)</p>
+            <p className="text-xs text-green-600 mt-1">PUBLISHED - IJCPR 2026 <a href="https://doi.org/10.25258/ijcpr.18.2.136" target="_blank" rel="noopener noreferrer" className="underline">DOI</a></p>
           </div>
           <div className="p-3 bg-white rounded border border-violet-100">
             <p className="text-sm text-violet-800 font-semibold">Paper 3: TyG &amp; HbA1c Correlation</p>
-            <p className="text-xs text-violet-600 mt-1">🆕 NEW (HbA1c field added) • ✏️ ACTIVE: Full development workspace</p>
+            <p className="text-xs text-green-600 mt-1">PUBLISHED - Int J Med 2026 <a href="https://doi.org/10.61336/im/26-3-10" target="_blank" rel="noopener noreferrer" className="underline">DOI</a></p>
           </div>
         </div>
       </div>
@@ -278,7 +278,7 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
           >
             <div className="text-2xl mb-1">📊</div>
             <div className="font-bold text-sm">Paper 2: TyG-Waist</div>
-            <div className="text-xs opacity-80">Submitted</div>
+            <div className="text-xs opacity-80">Published (IJCPR 2026)</div>
           </button>
           <button
             type="button"
@@ -298,7 +298,7 @@ export default function Tab5JCDR({ patientData, onBack }: Props) {
           <p className="text-sm text-indigo-800">
             <strong>Currently generating:</strong>{' '}
             {selectedPaper === 'paper2'
-              ? 'Paper 2: TyG Index & Waist Circumference (Submitted)'
+              ? 'Paper 2: TyG Index & Waist Circumference (Published)'
               : 'Paper 3: TyG Index & HbA1c – ADA 2026 Diabetes Risk Stratification'}
           </p>
         </div>

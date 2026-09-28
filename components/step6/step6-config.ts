@@ -10,8 +10,8 @@ export interface PaperOption {
 
 export const PAPER_OPTIONS: PaperOption[] = [
   { id: 'paper1', title: 'TyG & Metabolic Risk (NAFLD)', status: 'Published', journal: 'J Contemp Clin Pract', doi: '10.61336/jccp/25-08-50' },
-  { id: 'paper2', title: 'TyG-WC & Insulin Resistance', status: 'Submitted', journal: 'IJCPR' },
-  { id: 'paper3', title: 'TyG-HbA1c & ADA 2026 Risk', status: 'Active' },
+  { id: 'paper2', title: 'TyG-WC & Insulin Resistance', status: 'Published', journal: 'IJCPR 2026;18(2):826-833', doi: '10.25258/ijcpr.18.2.136' },
+  { id: 'paper3', title: 'TyG-HbA1c Association (74 patients)', status: 'Published', journal: 'Int J Med 2026;8(2)', doi: '10.61336/im/26-3-10' },
 ];
 
 export const JOURNAL_TEMPLATES = [

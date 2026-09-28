@@ -12,16 +12,16 @@ export function Footer() {
               🏆 Paper 1: Published
             </span>
             <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded border border-blue-200">
-              📤 Paper 2: Submitted
+              📤 Paper 2: Published
             </span>
             <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded border border-purple-200 font-semibold">
-              🧪 Paper 3: Active
+              🧪 Paper 3: Published
             </span>
           </div>
         </div>
 
         <div className="mt-2 text-xs text-gray-400 text-center">
-          DOI: 10.61336/jccp/25-08-50 | TyG Research Dashboard v2.0
+          DOIs: 10.61336/jccp/25-08-50 | 10.25258/ijcpr.18.2.136 | 10.61336/im/26-3-10 | TyG Research Dashboard v2.0
         </div>
       </div>
     </footer>
